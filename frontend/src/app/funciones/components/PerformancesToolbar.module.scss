@@ -1,0 +1,27 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.select {
+  min-width: 200px;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f5f5;
+}
+
+.actions {
+  display: inline-flex;
+  gap: 0.5rem;
+}

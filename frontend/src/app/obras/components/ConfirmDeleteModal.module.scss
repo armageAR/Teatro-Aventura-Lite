@@ -1,0 +1,37 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 30;
+}
+
+.dialog {
+  width: min(90vw, 420px);
+  background: #1f1f1f;
+  border-radius: 14px;
+  padding: 2rem;
+  box-shadow: 0 20px 36px rgba(0, 0, 0, 0.4);
+  color: #f5f5f5;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.message {
+  margin: 0;
+  line-height: 1.6;
+  color: rgba(245, 245, 245, 0.8);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

@@ -1,0 +1,99 @@
+.page {
+  min-height: calc(100vh - 72px);
+  background: #111;
+  color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.breadcrumb {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.9rem;
+  color: rgba(245, 245, 245, 0.7);
+}
+
+.headingGroup {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.heading {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.description {
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.6;
+  color: rgba(245, 245, 245, 0.7);
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tableArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feedback {
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+.loading {
+  color: rgba(245, 245, 245, 0.8);
+}
+
+.meta {
+  font-size: 0.95rem;
+  color: rgba(245, 245, 245, 0.65);
+}
+
+.optionsPanel {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.optionsHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.optionsActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.optionsHeading {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.optionsDescription {
+  margin: 0;
+  color: rgba(245, 245, 245, 0.7);
+}

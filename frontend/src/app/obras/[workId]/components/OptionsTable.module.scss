@@ -1,0 +1,67 @@
+.tableContainer {
+  background: #1b1b1b;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.headRow {
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+
+.headCell,
+.bodyCell {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.headCell {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(245, 245, 245, 0.65);
+}
+
+.bodyRowDeleted {
+  opacity: 0.55;
+}
+
+.text {
+  font-weight: 600;
+}
+
+.notes {
+  color: rgba(245, 245, 245, 0.75);
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.reorderControls {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-right: 0.35rem;
+}
+
+.emptyState,
+.errorState,
+.loadingState {
+  padding: 1.25rem;
+  text-align: center;
+  color: rgba(245, 245, 245, 0.75);
+}
+
+.errorState {
+  color: #ff6b6b;
+}
