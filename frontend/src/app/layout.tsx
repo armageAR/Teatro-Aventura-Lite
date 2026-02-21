@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppShell } from "@/components/app-shell/AppShell";
-
+import { KeycloakProvider } from "@/providers/KeycloakProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   ),
   title: {
     default: "Teatro Aventura Lite",
@@ -65,7 +65,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AppShell>{children}</AppShell>
+        <KeycloakProvider>
+          <AppShell>{children}</AppShell>
+        </KeycloakProvider>
       </body>
     </html>
   );

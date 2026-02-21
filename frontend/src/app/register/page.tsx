@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 
 import { ActionButton } from "@/components/ui/Button";
-import { api } from "@/lib/api";
+import { useApi } from "@/hooks/useApi";
 
 import styles from "./page.module.scss";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const api = useApi();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

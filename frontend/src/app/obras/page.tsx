@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 
-import { api } from "@/lib/api";
+import { useApi } from "@/hooks/useApi";
 import { WorksToolbar } from "./components/WorksToolbar";
 import { WorksTable, type Work } from "./components/WorksTable";
 import { WorkFormModal } from "./components/WorkFormModal";
@@ -36,6 +36,7 @@ function normalizeWork(work: WorkApi): Work {
 
 export default function ObrasPage() {
   const { openLogin } = useAuth();
+  const api = useApi();
   const [works, setWorks] = useState<Work[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -103,7 +104,7 @@ export default function ObrasPage() {
     };
 
     fetchWorks();
-  }, [debouncedSearch, showDeleted, openLogin]);
+  }, [debouncedSearch, showDeleted, openLogin, api]);
 
   const displayedWorks = useMemo(() => {
     if (!debouncedSearch) {

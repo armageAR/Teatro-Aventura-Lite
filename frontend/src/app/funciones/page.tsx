@@ -11,7 +11,7 @@ import {
   type SortDirection,
   type SortKey,
 } from "./components/PerformancesTable";
-import { api } from "@/lib/api";
+import { useApi } from "@/hooks/useApi";
 
 import styles from "./page.module.scss";
 
@@ -49,6 +49,7 @@ type LoadState = "idle" | "loading" | "error" | "success";
 
 export default function FuncionesPage() {
   const { openLogin } = useAuth();
+  const api = useApi();
 
   const [performances, setPerformances] = useState<NormalizedPerformance[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("idle");
@@ -107,7 +108,7 @@ export default function FuncionesPage() {
 
       setLoadState("error");
     }
-  }, [openLogin]);
+  }, [openLogin, api]);
 
   useEffect(() => {
     fetchPerformances();

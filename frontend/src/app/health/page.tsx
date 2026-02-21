@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import { api } from "@/lib/api";
+import { useApi } from "@/hooks/useApi";
 
 export default function HealthPage() {
+  const api = useApi();
   const [status, setStatus] = useState<unknown>(null);
 
   useEffect(() => {
@@ -12,7 +13,7 @@ export default function HealthPage() {
       .get("/api/health")
       .then((res) => setStatus(res.data))
       .catch((err) => setStatus({ error: err.message }));
-  }, []);
+  }, [api]);
 
   const loading = status === null;
   const ok =
