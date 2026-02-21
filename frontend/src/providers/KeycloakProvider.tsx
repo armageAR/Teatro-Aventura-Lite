@@ -11,7 +11,7 @@ import Keycloak from "keycloak-js";
 
 const keycloak = new Keycloak({
   url: "https://auth.armage.tech",
-  realm: "teatro-aventura-lite",
+  realm: "Teatro-Aventura-Lite",
   clientId: "teatro-aventura-lite",
 });
 
