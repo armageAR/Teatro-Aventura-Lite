@@ -52,11 +52,10 @@ Route::get('/health', function () {
     }
 });
 
-// === AUTH PROTEGIDO ===
-Route::middleware('auth')->group(function () {
-    Route::get('/me', fn(Request $r) => $r->user());
-    Route::post('/logout', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy']);
-    // tus endpoints protegidos...
+// === AUTH PROTEGIDO (Keycloak) ===
+Route::middleware('keycloak')->group(function () {
+    Route::get('/me', fn(Request $r) => response()->json($r->get('keycloak_user')));
+
     Route::apiResource('plays', PlayController::class);
     Route::patch('plays/{play}/restore', [PlayController::class, 'restore'])->name('plays.restore');
     Route::apiResource('plays.questions', QuestionController::class)->shallow();
@@ -66,10 +65,6 @@ Route::middleware('auth')->group(function () {
     Route::apiResource('plays.performances', PerformanceController::class)->shallow();
     Route::patch('performances/{performance}/restore', [PerformanceController::class, 'restore'])->name('performances.restore');
 });
-
-// === AUTH PÚBLICO ===
-Route::post('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);
-Route::post('/register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'store']);
 
 
 
