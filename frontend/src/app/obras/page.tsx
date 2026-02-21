@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 
 import { useApi } from "@/hooks/useApi";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { WorksToolbar } from "./components/WorksToolbar";
 import { WorksTable, type Work } from "./components/WorksTable";
 import { WorkFormModal } from "./components/WorkFormModal";
-import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
 import { CreatePerformanceModal } from "./components/CreatePerformanceModal";
 import styles from "./page.module.scss";
 
@@ -322,9 +322,13 @@ export default function ObrasPage() {
         onSubmit={handleSubmitWork}
       />
 
-      <ConfirmDeleteModal
+      <ConfirmDialog
         open={Boolean(deleteTarget)}
-        workTitle={deleteTarget?.title ?? ""}
+        title="¿Eliminar obra?"
+        message={`Esta acción enviará la obra "${deleteTarget?.title ?? ""}" a la papelera. Podrás verla si activas "Ver obras borradas".`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmVariant="danger"
         submitting={deleteSubmitting}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}

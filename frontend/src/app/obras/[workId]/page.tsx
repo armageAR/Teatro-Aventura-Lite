@@ -6,9 +6,8 @@ import { useParams } from "next/navigation";
 
 import { ActionButton, LinkButton } from "@/components/ui/Button";
 import { useApi } from "@/hooks/useApi";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-import { ConfirmQuestionDeleteModal } from "./components/ConfirmQuestionDeleteModal";
-import { ConfirmOptionDeleteModal } from "./components/ConfirmOptionDeleteModal";
 import { OptionFormModal } from "./components/OptionFormModal";
 import { OptionsTable, type Option } from "./components/OptionsTable";
 import { QuestionFormModal } from "./components/QuestionFormModal";
@@ -710,9 +709,13 @@ export default function ManageObraQuestionsPage() {
         onSubmit={handleSubmitQuestion}
       />
 
-      <ConfirmQuestionDeleteModal
+      <ConfirmDialog
         open={Boolean(deleteTarget)}
-        questionLabel={deleteTarget?.question ?? ""}
+        title="¿Eliminar pregunta?"
+        message={`La pregunta "${deleteTarget?.question ?? ""}" quedará en la papelera de esta obra. Podrás volver a crearla más adelante si lo necesitás.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmVariant="danger"
         submitting={deleteSubmitting}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
@@ -730,9 +733,13 @@ export default function ManageObraQuestionsPage() {
         />
       )}
 
-      <ConfirmOptionDeleteModal
+      <ConfirmDialog
         open={Boolean(optionDeleteTarget)}
-        optionLabel={optionDeleteTarget?.text ?? ""}
+        title="¿Eliminar opción?"
+        message={`La opción "${optionDeleteTarget?.text ?? ""}" dejará de estar disponible para el público. Podrás crear una nueva cuando quieras.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmVariant="danger"
         submitting={optionDeleteSubmitting}
         onCancel={handleCancelOptionDelete}
         onConfirm={handleConfirmOptionDelete}

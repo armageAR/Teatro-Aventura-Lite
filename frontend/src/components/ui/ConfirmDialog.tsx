@@ -2,23 +2,31 @@
 
 import { ActionButton } from "@/components/ui/Button";
 
-import styles from "./ConfirmDeleteModal.module.scss";
+import styles from "./ConfirmDialog.module.scss";
 
-export type ConfirmDeleteModalProps = {
+export type ConfirmDialogProps = {
   open: boolean;
-  workTitle: string;
-  submitting: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  confirmVariant?: "solid" | "danger";
+  submitting?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
 
-export function ConfirmDeleteModal({
+export function ConfirmDialog({
   open,
-  workTitle,
-  submitting,
+  title,
+  message,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  confirmVariant = "danger",
+  submitting = false,
   onCancel,
   onConfirm,
-}: ConfirmDeleteModalProps) {
+}: ConfirmDialogProps) {
   if (!open) {
     return null;
   }
@@ -26,11 +34,8 @@ export function ConfirmDeleteModal({
   return (
     <div className={styles.overlay}>
       <div className={styles.dialog}>
-        <h2 className={styles.title}>¿Eliminar obra?</h2>
-        <p className={styles.message}>
-          Esta acción enviará la obra &quot;{workTitle}&quot; a la papelera.
-          Podrás verla si activas &quot;Ver obras borradas&quot;.
-        </p>
+        <h2 className={styles.title}>{title}</h2>
+        <p className={styles.message}>{message}</p>
 
         <div className={styles.footer}>
           <ActionButton
@@ -39,15 +44,15 @@ export function ConfirmDeleteModal({
             onClick={onCancel}
             disabled={submitting}
           >
-            Cancelar
+            {cancelText}
           </ActionButton>
           <ActionButton
-            variant="danger"
+            variant={confirmVariant}
             type="button"
             onClick={onConfirm}
             disabled={submitting}
           >
-            {submitting ? "Eliminando..." : "Eliminar"}
+            {submitting ? "Procesando..." : confirmText}
           </ActionButton>
         </div>
       </div>
