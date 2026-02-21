@@ -4,27 +4,17 @@ namespace Tests\Feature;
 
 use App\Models\Performance;
 use App\Models\Play;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class PerformanceManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function authenticate(): User
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
-
-        return $user;
-    }
-
     public function test_authenticated_users_can_list_performances_for_a_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
         Performance::factory()
@@ -61,7 +51,7 @@ class PerformanceManagementTest extends TestCase
 
     public function test_index_can_include_soft_deleted_performances(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
         $activePerformance = Performance::factory()->for($play)->create();
@@ -78,7 +68,7 @@ class PerformanceManagementTest extends TestCase
 
     public function test_authenticated_users_can_create_a_performance(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
 
@@ -110,7 +100,7 @@ class PerformanceManagementTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
 
@@ -123,7 +113,7 @@ class PerformanceManagementTest extends TestCase
 
     public function test_store_validates_unique_uid_when_provided(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
         Performance::factory()->for($play)->create(['uid' => 'EXISTINGUID']);
@@ -141,7 +131,7 @@ class PerformanceManagementTest extends TestCase
 
     public function test_authenticated_users_can_view_a_performance(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $performance = Performance::factory()->create();
 
@@ -157,7 +147,7 @@ class PerformanceManagementTest extends TestCase
 
     public function test_authenticated_users_can_update_a_performance(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $performance = Performance::factory()->create([
             'comment' => 'Sin comentarios',
@@ -178,12 +168,16 @@ class PerformanceManagementTest extends TestCase
                 'comment' => 'Comentario actualizado',
             ]);
 
-        $this->assertDatabaseHas('performances', array_merge(['id' => $performance->id], $payload));
+        $this->assertDatabaseHas('performances', [
+            'id' => $performance->id,
+            'location' => 'Teatro Renovado',
+            'comment' => 'Comentario actualizado',
+        ]);
     }
 
     public function test_authenticated_users_can_soft_delete_a_performance(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $performance = Performance::factory()->create();
 
@@ -199,7 +193,7 @@ class PerformanceManagementTest extends TestCase
 
     public function test_authenticated_users_can_restore_a_performance(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $performance = Performance::factory()->create();
         $performance->delete();

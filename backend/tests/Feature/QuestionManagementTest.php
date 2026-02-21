@@ -4,26 +4,16 @@ namespace Tests\Feature;
 
 use App\Models\Play;
 use App\Models\Question;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class QuestionManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function authenticate(): User
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
-
-        return $user;
-    }
-
     public function test_authenticated_users_can_list_questions_for_a_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
         Question::factory()
@@ -61,7 +51,7 @@ class QuestionManagementTest extends TestCase
 
     public function test_index_can_include_soft_deleted_questions(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
         $activeQuestion = Question::factory()->for($play)->create(['order' => 1]);
@@ -78,7 +68,7 @@ class QuestionManagementTest extends TestCase
 
     public function test_authenticated_users_can_create_a_question(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
 
@@ -104,7 +94,7 @@ class QuestionManagementTest extends TestCase
 
     public function test_store_validates_unique_order_per_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
         Question::factory()->for($play)->create(['order' => 1]);
@@ -121,7 +111,7 @@ class QuestionManagementTest extends TestCase
 
     public function test_authenticated_users_can_view_a_question(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create(['order' => 1]);
 
@@ -138,7 +128,7 @@ class QuestionManagementTest extends TestCase
 
     public function test_authenticated_users_can_update_a_question(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create(['order' => 1]);
 
@@ -159,7 +149,7 @@ class QuestionManagementTest extends TestCase
 
     public function test_authenticated_users_can_soft_delete_a_question(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create();
 
@@ -175,7 +165,7 @@ class QuestionManagementTest extends TestCase
 
     public function test_authenticated_users_can_restore_a_question(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create();
         $question->delete();

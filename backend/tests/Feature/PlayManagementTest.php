@@ -3,26 +3,16 @@
 namespace Tests\Feature;
 
 use App\Models\Play;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class PlayManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function authenticate(): User
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
-
-        return $user;
-    }
-
     public function test_authenticated_users_can_list_plays(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         Play::factory()->count(3)->create();
 
@@ -48,7 +38,7 @@ class PlayManagementTest extends TestCase
 
     public function test_index_can_include_soft_deleted_records(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $activePlay = Play::factory()->create();
         $deletedPlay = Play::factory()->create();
@@ -65,7 +55,7 @@ class PlayManagementTest extends TestCase
 
     public function test_authenticated_users_can_create_a_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $payload = [
             'title' => 'Hamlet',
@@ -84,7 +74,7 @@ class PlayManagementTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $response = $this->postJson('/api/plays', []);
 
@@ -95,7 +85,7 @@ class PlayManagementTest extends TestCase
 
     public function test_authenticated_users_can_view_a_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
 
@@ -112,7 +102,7 @@ class PlayManagementTest extends TestCase
 
     public function test_authenticated_users_can_update_a_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
 
@@ -132,7 +122,7 @@ class PlayManagementTest extends TestCase
 
     public function test_authenticated_users_can_soft_delete_a_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
 
@@ -145,7 +135,7 @@ class PlayManagementTest extends TestCase
 
     public function test_authenticated_users_can_restore_a_play(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $play = Play::factory()->create();
         $play->delete();

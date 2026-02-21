@@ -10,7 +10,6 @@ import { WorkFormModal } from "./components/WorkFormModal";
 import { ConfirmDeleteModal } from "./components/ConfirmDeleteModal";
 import { CreatePerformanceModal } from "./components/CreatePerformanceModal";
 import styles from "./page.module.scss";
-import { useAuth } from "@/components/app-shell/AppShell";
 
 const WORKS_ENDPOINT = "/api/plays";
 
@@ -35,7 +34,6 @@ function normalizeWork(work: WorkApi): Work {
 }
 
 export default function ObrasPage() {
-  const { openLogin } = useAuth();
   const api = useApi();
   const [works, setWorks] = useState<Work[]>([]);
   const [search, setSearch] = useState("");
@@ -84,15 +82,8 @@ export default function ObrasPage() {
         setWorks(response.data.map(normalizeWork));
       } catch (err) {
         if (isAxiosError(err)) {
-          const status = err.response?.status;
-
-          if (status === 401) {
-            setError("Necesitás iniciar sesión para ver las obras.");
-            openLogin();
-          } else {
-            const message = err.response?.data?.message as string | undefined;
-            setError(message ?? "No se pudieron cargar las obras.");
-          }
+          const message = err.response?.data?.message as string | undefined;
+          setError(message ?? "No se pudieron cargar las obras.");
         } else if (err instanceof Error) {
           setError(err.message);
         } else {
@@ -104,7 +95,7 @@ export default function ObrasPage() {
     };
 
     fetchWorks();
-  }, [debouncedSearch, showDeleted, openLogin, api]);
+  }, [debouncedSearch, showDeleted, api]);
 
   const displayedWorks = useMemo(() => {
     if (!debouncedSearch) {
@@ -207,15 +198,8 @@ export default function ObrasPage() {
       setPerformanceMessage(`Función creada para "${workTitle}".`);
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-
-        if (status === 401) {
-          openLogin();
-          setPerformanceError("Necesitás iniciar sesión");
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setPerformanceError(message ?? "No se pudo crear la función.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setPerformanceError(message ?? "No se pudo crear la función.");
       } else if (err instanceof Error) {
         setPerformanceError(err.message);
       } else {
@@ -242,14 +226,8 @@ export default function ObrasPage() {
       await refreshWorks();
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          openLogin();
-          setFormError("Necesitás iniciar sesión");
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setFormError(message ?? "No se pudo guardar la obra.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setFormError(message ?? "No se pudo guardar la obra.");
       } else if (err instanceof Error) {
         setFormError(err.message);
       } else {
@@ -280,9 +258,6 @@ export default function ObrasPage() {
       await refreshWorks();
     } catch (err) {
       console.error("No se pudo eliminar la obra", err);
-      if (isAxiosError(err) && err.response?.status === 401) {
-        openLogin();
-      }
     } finally {
       setDeleteSubmitting(false);
     }
@@ -297,9 +272,6 @@ export default function ObrasPage() {
     } catch (err) {
       console.error("No se pudo restaurar la obra", err);
       setError("No se pudo restaurar la obra.");
-      if (isAxiosError(err) && err.response?.status === 401) {
-        openLogin();
-      }
     } finally {
       setRestoringId(null);
     }

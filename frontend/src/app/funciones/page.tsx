@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 
-import { useAuth } from "@/components/app-shell/AppShell";
 import { PerformancesToolbar, type FilterOption } from "./components/PerformancesToolbar";
 import {
   PerformancesTable,
@@ -48,7 +47,6 @@ const PERFORMANCES_ENDPOINT = (playId: number) => `${PLAYS_ENDPOINT}/${playId}/p
 type LoadState = "idle" | "loading" | "error" | "success";
 
 export default function FuncionesPage() {
-  const { openLogin } = useAuth();
   const api = useApi();
 
   const [performances, setPerformances] = useState<NormalizedPerformance[]>([]);
@@ -91,15 +89,8 @@ export default function FuncionesPage() {
       setLoadState("success");
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-
-        if (status === 401) {
-          setError("Necesitás iniciar sesión para ver las funciones.");
-          openLogin();
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setError(message ?? "No se pudieron cargar las funciones.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setError(message ?? "No se pudieron cargar las funciones.");
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -108,7 +99,7 @@ export default function FuncionesPage() {
 
       setLoadState("error");
     }
-  }, [openLogin, api]);
+  }, [api]);
 
   useEffect(() => {
     fetchPerformances();

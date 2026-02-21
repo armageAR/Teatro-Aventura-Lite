@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import { useParams } from "next/navigation";
 
-import { useAuth } from "@/components/app-shell/AppShell";
 import { ActionButton, LinkButton } from "@/components/ui/Button";
 import { useApi } from "@/hooks/useApi";
 
@@ -108,7 +107,6 @@ export default function ManageObraQuestionsPage() {
   const workIdValue = Array.isArray(rawWorkId) ? rawWorkId[0] : rawWorkId;
   const workId = Number(workIdValue);
 
-  const { openLogin } = useAuth();
   const api = useApi();
 
   const [play, setPlay] = useState<Play | null>(null);
@@ -164,10 +162,7 @@ export default function ManageObraQuestionsPage() {
         if (isAxiosError(err)) {
           const status = err.response?.status;
 
-          if (status === 401) {
-            setPageError("Necesitás iniciar sesión para ver esta obra.");
-            openLogin();
-          } else if (status === 404) {
+          if (status === 404) {
             setPageError("No encontramos la obra solicitada.");
           } else {
             const message = err.response?.data?.message as string | undefined;
@@ -184,7 +179,7 @@ export default function ManageObraQuestionsPage() {
     };
 
     fetchPlay();
-  }, [workId, openLogin, api]);
+  }, [workId, api]);
 
   const fetchQuestions = useCallback(async () => {
     if (Number.isNaN(workId)) {
@@ -200,14 +195,8 @@ export default function ManageObraQuestionsPage() {
       setQuestions(sortByOrder(normalized));
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          setQuestionsError("Necesitás iniciar sesión para ver las preguntas.");
-          openLogin();
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setQuestionsError(message ?? "No se pudieron cargar las preguntas.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setQuestionsError(message ?? "No se pudieron cargar las preguntas.");
       } else if (err instanceof Error) {
         setQuestionsError(err.message);
       } else {
@@ -216,7 +205,7 @@ export default function ManageObraQuestionsPage() {
     } finally {
       setLoadingQuestions(false);
     }
-  }, [workId, openLogin, api]);
+  }, [workId, api]);
 
   useEffect(() => {
     fetchQuestions();
@@ -234,14 +223,8 @@ export default function ManageObraQuestionsPage() {
         setOptions(sortOptions(response.data.map(normalizeOption)));
       } catch (err) {
         if (isAxiosError(err)) {
-          const status = err.response?.status;
-          if (status === 401) {
-            setOptionsError("Necesitás iniciar sesión para ver las opciones.");
-            openLogin();
-          } else {
-            const message = err.response?.data?.message as string | undefined;
-            setOptionsError(message ?? "No se pudieron cargar las opciones.");
-          }
+          const message = err.response?.data?.message as string | undefined;
+          setOptionsError(message ?? "No se pudieron cargar las opciones.");
         } else if (err instanceof Error) {
           setOptionsError(err.message);
         } else {
@@ -251,7 +234,7 @@ export default function ManageObraQuestionsPage() {
         setLoadingOptions(false);
       }
     },
-    [openLogin, api]
+    [api]
   );
 
   useEffect(() => {
@@ -337,14 +320,8 @@ export default function ManageObraQuestionsPage() {
       setFeedbackMessage("Cambios guardados correctamente.");
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          openLogin();
-          setFormError("Necesitás iniciar sesión");
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setFormError(message ?? "No se pudo guardar la pregunta.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setFormError(message ?? "No se pudo guardar la pregunta.");
       } else if (err instanceof Error) {
         setFormError(err.message);
       } else {
@@ -393,14 +370,8 @@ export default function ManageObraQuestionsPage() {
       );
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          openLogin();
-          setFeedbackMessage("Necesitás iniciar sesión para reordenar preguntas.");
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setFeedbackMessage(message ?? "No se pudo reordenar la pregunta.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setFeedbackMessage(message ?? "No se pudo reordenar la pregunta.");
       } else if (err instanceof Error) {
         setFeedbackMessage(err.message);
       } else {
@@ -437,9 +408,7 @@ export default function ManageObraQuestionsPage() {
       await fetchQuestions();
       setFeedbackMessage("Pregunta eliminada.");
     } catch (err) {
-      if (isAxiosError(err) && err.response?.status === 401) {
-        openLogin();
-      }
+      console.error("No se pudo eliminar la pregunta", err);
       setFeedbackMessage("No se pudo eliminar la pregunta.");
     } finally {
       setDeleteSubmitting(false);
@@ -546,14 +515,8 @@ export default function ManageObraQuestionsPage() {
       setFeedbackMessage("Opción guardada correctamente.");
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          openLogin();
-          setOptionFormError("Necesitás iniciar sesión");
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setOptionFormError(message ?? "No se pudo guardar la opción.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setOptionFormError(message ?? "No se pudo guardar la opción.");
       } else if (err instanceof Error) {
         setOptionFormError(err.message);
       } else {
@@ -602,14 +565,8 @@ export default function ManageObraQuestionsPage() {
       );
     } catch (err) {
       if (isAxiosError(err)) {
-        const status = err.response?.status;
-        if (status === 401) {
-          openLogin();
-          setFeedbackMessage("Necesitás iniciar sesión para reordenar opciones.");
-        } else {
-          const message = err.response?.data?.message as string | undefined;
-          setFeedbackMessage(message ?? "No se pudo reordenar la opción.");
-        }
+        const message = err.response?.data?.message as string | undefined;
+        setFeedbackMessage(message ?? "No se pudo reordenar la opción.");
       } else if (err instanceof Error) {
         setFeedbackMessage(err.message);
       } else {
@@ -649,9 +606,7 @@ export default function ManageObraQuestionsPage() {
       await fetchQuestions();
       setFeedbackMessage("Opción eliminada.");
     } catch (err) {
-      if (isAxiosError(err) && err.response?.status === 401) {
-        openLogin();
-      }
+      console.error("No se pudo eliminar la opción", err);
       setFeedbackMessage("No se pudo eliminar la opción.");
     } finally {
       setOptionDeleteSubmitting(false);

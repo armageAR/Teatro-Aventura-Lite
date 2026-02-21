@@ -4,26 +4,16 @@ namespace Tests\Feature;
 
 use App\Models\Question;
 use App\Models\QuestionOption;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class QuestionOptionManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function authenticate(): User
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
-
-        return $user;
-    }
-
     public function test_authenticated_users_can_list_options_for_a_question(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create();
         QuestionOption::factory()
@@ -60,7 +50,7 @@ class QuestionOptionManagementTest extends TestCase
 
     public function test_index_can_include_soft_deleted_options(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create();
         $activeOption = QuestionOption::factory()->for($question)->create(['order' => 1]);
@@ -77,7 +67,7 @@ class QuestionOptionManagementTest extends TestCase
 
     public function test_authenticated_users_can_create_an_option(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create();
         $nextQuestion = Question::factory()->create();
@@ -104,7 +94,7 @@ class QuestionOptionManagementTest extends TestCase
 
     public function test_store_validates_unique_order_per_question(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $question = Question::factory()->create();
         QuestionOption::factory()->for($question)->create(['order' => 1]);
@@ -121,7 +111,7 @@ class QuestionOptionManagementTest extends TestCase
 
     public function test_authenticated_users_can_view_an_option(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $option = QuestionOption::factory()->create(['order' => 1]);
 
@@ -137,7 +127,7 @@ class QuestionOptionManagementTest extends TestCase
 
     public function test_authenticated_users_can_update_an_option(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $option = QuestionOption::factory()->create(['order' => 1]);
         $nextQuestion = Question::factory()->create();
@@ -160,7 +150,7 @@ class QuestionOptionManagementTest extends TestCase
 
     public function test_authenticated_users_can_soft_delete_an_option(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $option = QuestionOption::factory()->create();
 
@@ -176,7 +166,7 @@ class QuestionOptionManagementTest extends TestCase
 
     public function test_authenticated_users_can_restore_an_option(): void
     {
-        $this->authenticate();
+        $this->withKeycloakToken();
 
         $option = QuestionOption::factory()->create();
         $option->delete();
