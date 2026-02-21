@@ -52,11 +52,8 @@ Route::get('/health', function () {
     }
 });
 
-// Nota: /sanctum/csrf-cookie lo expone Sanctum automáticamente (GET) vía middleware "web".
-// En SPA, primero golpeás /sanctum/csrf-cookie y luego /login.
-
-// === AUTH PROTEGIDO (requiere cookie de sesión Sanctum) ===
-Route::middleware('auth:sanctum')->group(function () {
+// === AUTH PROTEGIDO ===
+Route::middleware('auth')->group(function () {
     Route::get('/me', fn(Request $r) => $r->user());
     Route::post('/logout', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy']);
     // tus endpoints protegidos...

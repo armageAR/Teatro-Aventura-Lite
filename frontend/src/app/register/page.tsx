@@ -32,7 +32,6 @@ export default function RegisterPage() {
     }
 
     try {
-      await api.get("/sanctum/csrf-cookie");
       const response = await api.post("/api/register", {
         name,
         email,

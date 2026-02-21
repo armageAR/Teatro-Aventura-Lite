@@ -87,7 +87,6 @@ export function AppShell({ children }: PropsWithChildren) {
       setLoginError(null);
 
       try {
-        await api.get("/sanctum/csrf-cookie");
         const response = await api.post<{ user: AuthUser }>("/api/login", {
           email,
           password,
