@@ -5,12 +5,43 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuestionOptionController;
 use App\Http\Controllers\PerformanceController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\HealthCheck;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
     try {
         DB::connection()->getPdo();
-        return response()->json(['status' => 'ok', 'database' => 'connected']);
+
+        $health = DB::transaction(function () {
+            $record = HealthCheck::query()->firstOrCreate(
+                ['id' => 1],
+                [
+                    'counter' => 0,
+                    'last_checked_at' => now(),
+                    'last_checked_by' => 'api/health',
+                ]
+            );
+
+            $before = $record->counter;
+            $record->counter = $record->counter + 1;
+            $record->last_checked_at = now();
+            $record->last_checked_by = 'api/health';
+            $record->save();
+
+            return [
+                'id' => $record->id,
+                'counter_before' => $before,
+                'counter_after' => $record->counter,
+                'last_checked_at' => $record->last_checked_at,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'ok',
+            'database' => 'connected',
+            'health_check' => $health,
+        ]);
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',
