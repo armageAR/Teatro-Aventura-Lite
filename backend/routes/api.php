@@ -40,6 +40,7 @@ Route::get('/health', function () {
         return response()->json([
             'status' => 'ok',
             'database' => 'connected',
+            'app_env' => config('app.env'),
             'health_check' => $health,
         ]);
     } catch (\Exception $e) {
