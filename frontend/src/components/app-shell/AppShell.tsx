@@ -13,7 +13,7 @@ import { isAxiosError } from "axios";
 
 import { LoginModal } from "@/components/login-modal/LoginModal";
 import { MenuBar } from "@/components/menu-bar/MenuBar";
-import { api } from "@/lib/api";
+import { useApi } from "@/hooks/useApi";
 
 export type AuthUser = {
   id: number;
@@ -46,6 +46,7 @@ export function useAuth() {
 }
 
 export function AppShell({ children }: PropsWithChildren) {
+  const api = useApi();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -87,7 +88,6 @@ export function AppShell({ children }: PropsWithChildren) {
       setLoginError(null);
 
       try {
-        await api.get("/sanctum/csrf-cookie");
         const response = await api.post<{ user: AuthUser }>("/api/login", {
           email,
           password,

@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 
 import { useAuth } from "@/components/app-shell/AppShell";
 import { ActionButton, LinkButton } from "@/components/ui/Button";
-import { api } from "@/lib/api";
+import { useApi } from "@/hooks/useApi";
 
 import { ConfirmQuestionDeleteModal } from "./components/ConfirmQuestionDeleteModal";
 import { ConfirmOptionDeleteModal } from "./components/ConfirmOptionDeleteModal";
@@ -109,6 +109,7 @@ export default function ManageObraQuestionsPage() {
   const workId = Number(workIdValue);
 
   const { openLogin } = useAuth();
+  const api = useApi();
 
   const [play, setPlay] = useState<Play | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -183,7 +184,7 @@ export default function ManageObraQuestionsPage() {
     };
 
     fetchPlay();
-  }, [workId, openLogin]);
+  }, [workId, openLogin, api]);
 
   const fetchQuestions = useCallback(async () => {
     if (Number.isNaN(workId)) {
@@ -215,7 +216,7 @@ export default function ManageObraQuestionsPage() {
     } finally {
       setLoadingQuestions(false);
     }
-  }, [workId, openLogin]);
+  }, [workId, openLogin, api]);
 
   useEffect(() => {
     fetchQuestions();
@@ -250,7 +251,7 @@ export default function ManageObraQuestionsPage() {
         setLoadingOptions(false);
       }
     },
-    [openLogin]
+    [openLogin, api]
   );
 
   useEffect(() => {
