@@ -6,9 +6,11 @@ use App\Models\Performance;
 use App\Models\PerformanceQuestion;
 use App\Models\Play;
 use App\Models\Question;
+use App\Models\Vote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class PerformanceController extends Controller
@@ -236,6 +238,60 @@ class PerformanceController extends Controller
         $pq->update(['closed_at' => now()]);
 
         return response()->json($this->buildQuestionStatus($pq->fresh(), $question));
+    }
+
+    public function live(Performance $performance): JsonResponse
+    {
+        $performanceQuestions = $performance->performanceQuestions()
+            ->whereNotNull('sent_at')
+            ->with('question.options')
+            ->orderBy('sent_at')
+            ->get();
+
+        // Aggregate vote counts per option for each performance question
+        $pqIds = $performanceQuestions->pluck('id');
+        $voteCounts = Vote::whereIn('performance_question_id', $pqIds)
+            ->select('performance_question_id', 'question_option_id', DB::raw('count(*) as cnt'))
+            ->groupBy('performance_question_id', 'question_option_id')
+            ->get()
+            ->groupBy('performance_question_id');
+
+        $questions = $performanceQuestions->map(function ($pq) use ($voteCounts) {
+            $question = $pq->question;
+            $status = $pq->closed_at !== null ? 'closed' : 'active';
+
+            $pqVotes = $voteCounts->get($pq->id, collect());
+            $countsByOption = $pqVotes->pluck('cnt', 'question_option_id');
+            $totalVotes = $countsByOption->sum();
+
+            $options = $question->options->map(function ($option) use ($countsByOption, $totalVotes) {
+                $count = (int) $countsByOption->get($option->id, 0);
+                return [
+                    'id' => $option->id,
+                    'text' => $option->text,
+                    'order' => $option->order,
+                    'vote_count' => $count,
+                    'vote_percentage' => $totalVotes > 0 ? round(($count / $totalVotes) * 100, 1) : 0.0,
+                ];
+            });
+
+            return [
+                'id' => $question->id,
+                'question' => $question->question,
+                'order' => $question->order,
+                'performance_status' => $status,
+                'sent_at' => $pq->sent_at,
+                'closed_at' => $pq->closed_at,
+                'total_votes' => (int) $totalVotes,
+                'options' => $options,
+            ];
+        });
+
+        return response()->json([
+            'performance_id' => $performance->id,
+            'status' => $performance->status,
+            'questions' => $questions,
+        ]);
     }
 
     private function buildQuestionStatus(PerformanceQuestion $pq, Question $question): array

@@ -6,6 +6,8 @@ use App\Models\Performance;
 use App\Models\PerformanceQuestion;
 use App\Models\Play;
 use App\Models\Question;
+use App\Models\QuestionOption;
+use App\Models\Vote;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -563,5 +565,129 @@ class PerformanceManagementTest extends TestCase
         $this->getJson("/api/performances/{$performance->id}/questions")->assertUnauthorized();
         $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/send")->assertUnauthorized();
         $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/close")->assertUnauthorized();
+    }
+
+    public function test_authenticated_users_can_get_live_results_with_no_votes(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+        $opt2 = QuestionOption::factory()->for($question)->create(['order' => 2]);
+
+        $pq = PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $response = $this->getJson("/api/performances/{$performance->id}/live");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['performance_id' => $performance->id, 'status' => 'live'])
+            ->assertJsonPath('questions.0.id', $question->id)
+            ->assertJsonPath('questions.0.performance_status', 'active')
+            ->assertJsonPath('questions.0.total_votes', 0)
+            ->assertJsonPath('questions.0.options.0.vote_count', 0)
+            ->assertJsonPath('questions.0.options.0.vote_percentage', 0);
+    }
+
+    public function test_live_results_shows_vote_counts_and_percentages(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+        $opt2 = QuestionOption::factory()->for($question)->create(['order' => 2]);
+
+        $pq = PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        // 3 votes for opt1, 1 vote for opt2 → 75% / 25%
+        Vote::insert([
+            ['performance_question_id' => $pq->id, 'question_option_id' => $opt1->id, 'spectator_token' => 'a', 'client_vote_id' => 'cv1', 'created_at' => now(), 'updated_at' => now()],
+            ['performance_question_id' => $pq->id, 'question_option_id' => $opt1->id, 'spectator_token' => 'b', 'client_vote_id' => 'cv2', 'created_at' => now(), 'updated_at' => now()],
+            ['performance_question_id' => $pq->id, 'question_option_id' => $opt1->id, 'spectator_token' => 'c', 'client_vote_id' => 'cv3', 'created_at' => now(), 'updated_at' => now()],
+            ['performance_question_id' => $pq->id, 'question_option_id' => $opt2->id, 'spectator_token' => 'd', 'client_vote_id' => 'cv4', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $response = $this->getJson("/api/performances/{$performance->id}/live");
+
+        $response->assertOk();
+        $data = $response->json();
+
+        $this->assertEquals(4, $data['questions'][0]['total_votes']);
+
+        $options = collect($data['questions'][0]['options'])->keyBy('id');
+
+        $this->assertEquals(3, $options[$opt1->id]['vote_count']);
+        $this->assertEquals(75.0, $options[$opt1->id]['vote_percentage']);
+        $this->assertEquals(1, $options[$opt2->id]['vote_count']);
+        $this->assertEquals(25.0, $options[$opt2->id]['vote_percentage']);
+    }
+
+    public function test_live_results_only_includes_sent_questions(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $q1 = Question::factory()->for($play)->create(['order' => 1]);
+        $q2 = Question::factory()->for($play)->create(['order' => 2]);
+
+        // Only q1 is sent (active)
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $q1->id,
+            'sent_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $response = $this->getJson("/api/performances/{$performance->id}/live");
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'questions')
+            ->assertJsonPath('questions.0.id', $q1->id);
+    }
+
+    public function test_live_results_includes_closed_questions(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $q1 = Question::factory()->for($play)->create(['order' => 1]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $q1->id,
+            'sent_at' => now()->subMinutes(5),
+            'closed_at' => now(),
+        ]);
+
+        $response = $this->getJson("/api/performances/{$performance->id}/live");
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'questions')
+            ->assertJsonPath('questions.0.performance_status', 'closed');
+    }
+
+    public function test_guests_cannot_access_live_endpoint(): void
+    {
+        $performance = Performance::factory()->create();
+
+        $this->getJson("/api/performances/{$performance->id}/live")->assertUnauthorized();
     }
 }

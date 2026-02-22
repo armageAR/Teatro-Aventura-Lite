@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -43,6 +43,31 @@ type PerformanceQuestionApi = {
   closed_at?: string | null;
 };
 
+type LiveOptionApi = {
+  id: number;
+  text: string;
+  order: number;
+  vote_count: number;
+  vote_percentage: number;
+};
+
+type LiveQuestionApi = {
+  id: number;
+  question: string;
+  order: number;
+  performance_status: "active" | "closed";
+  sent_at: string;
+  closed_at: string | null;
+  total_votes: number;
+  options: LiveOptionApi[];
+};
+
+type LiveResultsApi = {
+  performance_id: number;
+  status: string;
+  questions: LiveQuestionApi[];
+};
+
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "long",
   timeStyle: "short",
@@ -67,6 +92,8 @@ const QUESTION_STATUS_LABELS: Record<string, string> = {
   closed: "Cerrada",
 };
 
+const LIVE_POLL_INTERVAL_MS = 3000;
+
 export default function PerformanceDetailPage() {
   const params = useParams();
   const api = useApi();
@@ -83,6 +110,10 @@ export default function PerformanceDetailPage() {
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [questionActionLoading, setQuestionActionLoading] = useState<number | null>(null);
   const [questionActionError, setQuestionActionError] = useState<string | null>(null);
+
+  const [liveResults, setLiveResults] = useState<LiveResultsApi | null>(null);
+
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchPerformance = useCallback(async () => {
     setLoading(true);
@@ -116,6 +147,15 @@ export default function PerformanceDetailPage() {
       // Non-critical: questions section degrades gracefully
     } finally {
       setQuestionsLoading(false);
+    }
+  }, [api, performanceId]);
+
+  const fetchLiveResults = useCallback(async () => {
+    try {
+      const response = await api.get<LiveResultsApi>(`/api/performances/${performanceId}/live`);
+      setLiveResults(response.data);
+    } catch {
+      // Non-critical: results degrade gracefully
     }
   }, [api, performanceId]);
 
@@ -164,6 +204,8 @@ export default function PerformanceDetailPage() {
           `/api/performances/${performanceId}/questions/${questionId}/send`,
         );
         setQuestions((prev) => prev.map((q) => (q.id === questionId ? response.data : q)));
+        // Immediately fetch live results after sending a question
+        fetchLiveResults();
       } catch (err) {
         if (isAxiosError(err)) {
           const message = err.response?.data?.message as string | undefined;
@@ -175,7 +217,7 @@ export default function PerformanceDetailPage() {
         setQuestionActionLoading(null);
       }
     },
-    [api, performanceId],
+    [api, performanceId, fetchLiveResults],
   );
 
   const handleCloseQuestion = useCallback(
@@ -187,6 +229,8 @@ export default function PerformanceDetailPage() {
           `/api/performances/${performanceId}/questions/${questionId}/close`,
         );
         setQuestions((prev) => prev.map((q) => (q.id === questionId ? response.data : q)));
+        // Immediately fetch live results after closing a question
+        fetchLiveResults();
       } catch (err) {
         if (isAxiosError(err)) {
           const message = err.response?.data?.message as string | undefined;
@@ -198,13 +242,39 @@ export default function PerformanceDetailPage() {
         setQuestionActionLoading(null);
       }
     },
-    [api, performanceId],
+    [api, performanceId, fetchLiveResults],
   );
 
   useEffect(() => {
     fetchPerformance();
     fetchQuestions();
-  }, [fetchPerformance, fetchQuestions]);
+    fetchLiveResults();
+  }, [fetchPerformance, fetchQuestions, fetchLiveResults]);
+
+  // Poll live results every 3s when performance is live or has sent questions
+  useEffect(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+
+    const hasSentQuestions = questions.some(
+      (q) => q.performance_status === "active" || q.performance_status === "closed",
+    );
+
+    if (performance?.status === "live" || hasSentQuestions) {
+      pollTimerRef.current = setInterval(() => {
+        fetchLiveResults();
+      }, LIVE_POLL_INTERVAL_MS);
+    }
+
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [performance?.status, questions, fetchLiveResults]);
 
   if (loading) {
     return (
@@ -235,6 +305,11 @@ export default function PerformanceDetailPage() {
       : `/join/${performance.join_token}`;
 
   const hasActiveQuestion = questions.some((q) => q.performance_status === "active");
+
+  // Build a map of questionId → live result data for quick lookup
+  const liveResultsMap = new Map<number, LiveQuestionApi>(
+    (liveResults?.questions ?? []).map((lq) => [lq.id, lq]),
+  );
 
   return (
     <div className={styles.page}>
@@ -314,53 +389,81 @@ export default function PerformanceDetailPage() {
           {!questionsLoading && questions.length === 0 && (
             <p className={styles.statusMessage}>No hay preguntas para esta obra.</p>
           )}
-          {questions.map((q) => (
-            <div
-              key={q.id}
-              className={`${styles.questionItem} ${styles[`qItem_${q.performance_status}`] ?? ""}`}
-            >
-              <div className={styles.questionHeader}>
-                <span className={styles.questionOrder}>{q.order}.</span>
-                <span className={styles.questionText}>{q.question}</span>
-                <span
-                  className={`${styles.qStatusBadge} ${styles[`qBadge_${q.performance_status}`] ?? ""}`}
-                >
-                  {QUESTION_STATUS_LABELS[q.performance_status] ?? q.performance_status}
-                </span>
-              </div>
-              {q.options.length > 0 && (
-                <ul className={styles.optionsList}>
-                  {q.options.map((opt) => (
-                    <li key={opt.id} className={styles.optionItem}>
-                      {opt.text}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {performance.status === "live" && (
-                <div className={styles.questionActions}>
-                  {q.performance_status === "pending" && !hasActiveQuestion && (
-                    <button
-                      className={styles.btnSend}
-                      onClick={() => handleSendQuestion(q.id)}
-                      disabled={questionActionLoading === q.id}
-                    >
-                      {questionActionLoading === q.id ? "Enviando..." : "Enviar al público"}
-                    </button>
-                  )}
-                  {q.performance_status === "active" && (
-                    <button
-                      className={styles.btnCloseQuestion}
-                      onClick={() => handleCloseQuestion(q.id)}
-                      disabled={questionActionLoading === q.id}
-                    >
-                      {questionActionLoading === q.id ? "Cerrando..." : "Cerrar votación"}
-                    </button>
-                  )}
+          {questions.map((q) => {
+            const liveQ = liveResultsMap.get(q.id);
+            return (
+              <div
+                key={q.id}
+                className={`${styles.questionItem} ${styles[`qItem_${q.performance_status}`] ?? ""}`}
+              >
+                <div className={styles.questionHeader}>
+                  <span className={styles.questionOrder}>{q.order}.</span>
+                  <span className={styles.questionText}>{q.question}</span>
+                  <span
+                    className={`${styles.qStatusBadge} ${styles[`qBadge_${q.performance_status}`] ?? ""}`}
+                  >
+                    {QUESTION_STATUS_LABELS[q.performance_status] ?? q.performance_status}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
+                {liveQ ? (
+                  <ul className={styles.resultsList}>
+                    {liveQ.options.map((opt) => (
+                      <li key={opt.id} className={styles.resultItem}>
+                        <div className={styles.resultHeader}>
+                          <span className={styles.resultText}>{opt.text}</span>
+                          <span className={styles.resultCount}>
+                            {opt.vote_count} voto{opt.vote_count !== 1 ? "s" : ""}{" "}
+                            <span className={styles.resultPct}>({opt.vote_percentage}%)</span>
+                          </span>
+                        </div>
+                        <div className={styles.resultBar}>
+                          <div
+                            className={styles.resultBarFill}
+                            style={{ width: `${opt.vote_percentage}%` }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                    <li className={styles.resultTotal}>
+                      Total: {liveQ.total_votes} voto{liveQ.total_votes !== 1 ? "s" : ""}
+                    </li>
+                  </ul>
+                ) : (
+                  q.options.length > 0 && (
+                    <ul className={styles.optionsList}>
+                      {q.options.map((opt) => (
+                        <li key={opt.id} className={styles.optionItem}>
+                          {opt.text}
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                )}
+                {performance.status === "live" && (
+                  <div className={styles.questionActions}>
+                    {q.performance_status === "pending" && !hasActiveQuestion && (
+                      <button
+                        className={styles.btnSend}
+                        onClick={() => handleSendQuestion(q.id)}
+                        disabled={questionActionLoading === q.id}
+                      >
+                        {questionActionLoading === q.id ? "Enviando..." : "Enviar al público"}
+                      </button>
+                    )}
+                    {q.performance_status === "active" && (
+                      <button
+                        className={styles.btnCloseQuestion}
+                        onClick={() => handleCloseQuestion(q.id)}
+                        disabled={questionActionLoading === q.id}
+                      >
+                        {questionActionLoading === q.id ? "Cerrando..." : "Cerrar votación"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </section>
 
         <section className={styles.qrSection}>

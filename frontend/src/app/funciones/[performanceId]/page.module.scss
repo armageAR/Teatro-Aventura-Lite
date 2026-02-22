@@ -321,6 +321,68 @@
   }
 }
 
+.resultsList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.resultItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.resultText {
+  font-size: 0.875rem;
+  color: rgba(245, 245, 245, 0.85);
+  flex: 1;
+}
+
+.resultCount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(245, 245, 245, 0.9);
+  flex-shrink: 0;
+}
+
+.resultPct {
+  font-weight: 400;
+  color: rgba(245, 245, 245, 0.55);
+}
+
+.resultBar {
+  height: 6px;
+  background: rgba(245, 245, 245, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.resultBarFill {
+  height: 100%;
+  background: #1976d2;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.resultTotal {
+  font-size: 0.8rem;
+  color: rgba(245, 245, 245, 0.4);
+  text-align: right;
+  margin-top: 0.1rem;
+}
+
 .qrSection {
   display: flex;
   flex-direction: column;

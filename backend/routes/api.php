@@ -73,6 +73,7 @@ Route::middleware('keycloak')->group(function () {
     Route::get('performances/{performance}/questions', [PerformanceController::class, 'questions'])->name('performances.questions.index');
     Route::patch('performances/{performance}/questions/{question}/send', [PerformanceController::class, 'sendQuestion'])->name('performances.questions.send');
     Route::patch('performances/{performance}/questions/{question}/close', [PerformanceController::class, 'closeQuestion'])->name('performances.questions.close');
+    Route::get('performances/{performance}/live', [PerformanceController::class, 'live'])->name('performances.live');
 });
 
 
