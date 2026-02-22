@@ -115,7 +115,7 @@
         "Las operaciones send y close son idempotentes"
       ],
       "priority": 8,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-009",

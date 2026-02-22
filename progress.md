@@ -1,3 +1,23 @@
+## 2026-02-22 - US-008
+- Created migration `2026_02_22_400000_create_performance_questions_table.php`: `performance_questions` table with `performance_id`, `question_id`, `sent_at` (nullable), `closed_at` (nullable), unique on `(performance_id, question_id)`
+- Created `PerformanceQuestion` model with fillable `performance_id`, `question_id`, `sent_at`, `closed_at` and `datetime` casts
+- Added `performanceQuestions(): HasMany` relationship to `Performance` model
+- Added 4 new methods to `PerformanceController`: `questions()` (GET list with status), `sendQuestion()` (PATCH activate), `closeQuestion()` (PATCH deactivate), private `buildQuestionStatus()` helper
+- Added 3 new routes: `GET /api/performances/{performance}/questions`, `PATCH /api/performances/{performance}/questions/{question}/send`, `PATCH /api/performances/{performance}/questions/{question}/close`
+- Added 10 new tests in `PerformanceManagementTest` (77 total pass): list questions with status, send, idempotent send, can't send on non-live, wrong play, at-most-one active, close, idempotent close, can't close unsent, guest auth checks
+- Updated `funciones/[performanceId]/page.tsx`: added `PerformanceQuestionApi` type, `questions`/`questionsLoading`/`questionActionLoading`/`questionActionError` states, `fetchQuestions`, `handleSendQuestion`, `handleCloseQuestion` callbacks, Questions section with send/close buttons
+- Updated `page.module.scss`: added `.questionsSection`, `.questionsHeading`, `.questionItem`, `.qItem_active`, `.qItem_closed`, `.questionHeader`, `.questionOrder`, `.questionText`, `.qStatusBadge`, `.qBadge_active`, `.qBadge_closed`, `.optionsList`, `.optionItem`, `.questionActions`, `.btnSend`, `.btnCloseQuestion`
+- All 77 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `2026_02_22_400000_create_performance_questions_table.php`, `PerformanceQuestion.php`, `Performance.php`, `PerformanceController.php`, `api.php`, `PerformanceManagementTest.php`, `funciones/[performanceId]/page.tsx`, `funciones/[performanceId]/page.module.scss`
+- **Learnings for future iterations:**
+  - `firstOrNew(['performance_id' => ..., 'question_id' => ...])` works correctly when those fields are in `$fillable` — sets them on the new unsaved instance
+  - "At most one active" constraint enforced at application layer: check `whereNotNull('sent_at')->whereNull('closed_at')->exists()` before activating
+  - Question state machine: pending → active (sent_at set) → closed (closed_at set); once closed, cannot re-activate
+  - Frontend: `hasActiveQuestion = questions.some(q => q.performance_status === 'active')` drives button visibility
+  - `questionActionLoading: number | null` (not boolean) to track which specific question is loading; allows per-row disabled state
+  - `fetchPerformance` and `fetchQuestions` both added to the single `useEffect` dependency array for parallel initial load
+---
+
 ## 2026-02-22 - US-006
 - Added `qr()` method to `PerformanceController`: returns `{ join_url, join_token }` using `FRONTEND_URL` env var
 - Added route `GET /api/performances/{performance}/qr` inside keycloak middleware group in `api.php`
@@ -31,6 +51,7 @@
 ---
 
 ## Codebase Patterns
+- PerformanceQuestion pivot: tracks `sent_at`/`closed_at` for each question in a performance; at most 1 active (sent but not closed) per performance at a time
 - Performance model: has `status` (default 'draft') and `join_token` (UUID, unique) columns auto-set in `booted()` hook
 - Performance detail: GET /api/performances/:id now loads the `play` relationship (show() uses `$performance->load('play')`)
 - Frontend navigation after creation: use `useRouter().push('/funciones/{id}')` with typed API response `post<{ id: number }>`
