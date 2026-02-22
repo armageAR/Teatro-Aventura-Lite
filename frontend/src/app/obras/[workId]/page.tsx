@@ -10,7 +10,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 import { OptionFormModal } from "./components/OptionFormModal";
 import { OptionsTable, type Option } from "./components/OptionsTable";
-import { QuestionFormModal } from "./components/QuestionFormModal";
+import { QuestionFormModal, type InlineOption } from "./components/QuestionFormModal";
 import { QuestionsTable, type Question } from "./components/QuestionsTable";
 import styles from "./page.module.scss";
 
@@ -122,6 +122,7 @@ export default function ManageObraQuestionsPage() {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [formInitialOptions, setFormInitialOptions] = useState<InlineOption[]>([]);
 
   const [deleteTarget, setDeleteTarget] = useState<Question | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
@@ -266,13 +267,22 @@ export default function ManageObraQuestionsPage() {
     setFormMode("create");
     setSelectedQuestion(null);
     setFormError(null);
+    setFormInitialOptions([]);
     setFormOpen(true);
   };
 
-  const handleEditQuestion = (question: Question) => {
+  const handleEditQuestion = async (question: Question) => {
     setFormMode("edit");
     setSelectedQuestion(question);
     setFormError(null);
+
+    try {
+      const response = await api.get<OptionApi[]>(QUESTION_OPTIONS_ENDPOINT(question.id));
+      setFormInitialOptions(response.data.map((o) => ({ id: o.id, text: o.text })));
+    } catch {
+      setFormInitialOptions([]);
+    }
+
     setFormOpen(true);
   };
 
@@ -282,9 +292,14 @@ export default function ManageObraQuestionsPage() {
     setFormOpen(false);
     setSelectedQuestion(null);
     setFormError(null);
+    setFormInitialOptions([]);
   };
 
-  const handleSubmitQuestion = async (payload: { question: string; observations: string }) => {
+  const handleSubmitQuestion = async (payload: {
+    question: string;
+    observations: string;
+    options: InlineOption[];
+  }) => {
     if (Number.isNaN(workId)) {
       return;
     }
@@ -294,6 +309,7 @@ export default function ManageObraQuestionsPage() {
 
     const questionText = payload.question.trim();
     const observations = payload.observations.trim();
+    const submittedOptions = payload.options.filter((o) => o.text.trim() !== "");
 
     try {
       if (formMode === "create") {
@@ -301,20 +317,55 @@ export default function ManageObraQuestionsPage() {
           ? Math.max(...orderedQuestions.map((item) => item.order)) + 1
           : 1;
 
-        await api.post(QUESTIONS_ENDPOINT(workId), {
+        const questionResponse = await api.post<{ id: number }>(QUESTIONS_ENDPOINT(workId), {
           question: questionText,
-          observations: observations ? observations : null,
+          observations: observations || null,
           order: nextOrder,
         });
+
+        const newQuestionId = questionResponse.data.id;
+
+        for (let i = 0; i < submittedOptions.length; i++) {
+          await api.post(QUESTION_OPTIONS_ENDPOINT(newQuestionId), {
+            text: submittedOptions[i].text.trim(),
+            order: i + 1,
+          });
+        }
       } else if (selectedQuestion) {
-        await api.put(QUESTION_DETAIL_ENDPOINT(selectedQuestion.id), {
+        const capturedQuestionId = selectedQuestion.id;
+
+        await api.put(QUESTION_DETAIL_ENDPOINT(capturedQuestionId), {
           question: questionText,
-          observations: observations ? observations : null,
+          observations: observations || null,
         });
+
+        const submittedIds = new Set(submittedOptions.filter((o) => o.id).map((o) => o.id));
+        const toDelete = formInitialOptions.filter((o) => o.id && !submittedIds.has(o.id));
+        const toUpdate = submittedOptions.filter((o) => o.id);
+        const toCreate = submittedOptions.filter((o) => !o.id);
+
+        for (const o of toDelete) {
+          await api.delete(OPTION_DETAIL_ENDPOINT(o.id!));
+        }
+
+        for (let i = 0; i < toUpdate.length; i++) {
+          await api.put(OPTION_DETAIL_ENDPOINT(toUpdate[i].id!), {
+            text: toUpdate[i].text.trim(),
+            order: i + 1,
+          });
+        }
+
+        for (let i = 0; i < toCreate.length; i++) {
+          await api.post(QUESTION_OPTIONS_ENDPOINT(capturedQuestionId), {
+            text: toCreate[i].text.trim(),
+            order: toUpdate.length + i + 1,
+          });
+        }
       }
 
       setFormOpen(false);
       setSelectedQuestion(null);
+      setFormInitialOptions([]);
       await fetchQuestions();
       setFeedbackMessage("Cambios guardados correctamente.");
     } catch (err) {
@@ -703,6 +754,7 @@ export default function ManageObraQuestionsPage() {
         open={formOpen}
         mode={formMode}
         initialQuestion={selectedQuestion}
+        initialOptions={formInitialOptions}
         submitting={formSubmitting}
         error={formError}
         onClose={closeForm}

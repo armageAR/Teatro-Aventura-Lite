@@ -82,3 +82,31 @@
   color: #ff6b6b;
   font-size: 0.9rem;
 }
+
+.optionsSection {
+  display: grid;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.75rem;
+}
+
+.optionsSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.optionsList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.optionRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.optionInput {
+  flex: 1;
+}

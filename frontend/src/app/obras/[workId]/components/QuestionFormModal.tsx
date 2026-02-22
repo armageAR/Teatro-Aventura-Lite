@@ -7,15 +7,22 @@ import { ActionButton } from "@/components/ui/Button";
 import styles from "./QuestionFormModal.module.scss";
 import type { Question } from "./QuestionsTable";
 
+export type InlineOption = {
+  id?: number;
+  text: string;
+};
+
 type QuestionPayload = {
   question: string;
   observations: string;
+  options: InlineOption[];
 };
 
 type QuestionFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   initialQuestion: Question | null;
+  initialOptions?: InlineOption[];
   submitting: boolean;
   error: string | null;
   onClose: () => void;
@@ -26,6 +33,7 @@ export function QuestionFormModal({
   open,
   mode,
   initialQuestion,
+  initialOptions,
   submitting,
   error,
   onClose,
@@ -33,11 +41,13 @@ export function QuestionFormModal({
 }: QuestionFormModalProps) {
   const [question, setQuestion] = useState("");
   const [observations, setObservations] = useState("");
+  const [inlineOptions, setInlineOptions] = useState<InlineOption[]>([]);
 
   useEffect(() => {
     if (!open) {
       setQuestion("");
       setObservations("");
+      setInlineOptions([]);
       return;
     }
 
@@ -48,15 +58,33 @@ export function QuestionFormModal({
       setQuestion("");
       setObservations("");
     }
-  }, [open, initialQuestion]);
+
+    setInlineOptions(initialOptions ? [...initialOptions] : []);
+  }, [open, initialQuestion, initialOptions]);
 
   if (!open) {
     return null;
   }
 
+  const addOption = () => {
+    setInlineOptions((prev) => [...prev, { text: "" }]);
+  };
+
+  const updateOption = (index: number, text: string) => {
+    setInlineOptions((prev) => prev.map((o, i) => (i === index ? { ...o, text } : o)));
+  };
+
+  const removeOption = (index: number) => {
+    setInlineOptions((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit({ question, observations });
+    onSubmit({
+      question,
+      observations,
+      options: inlineOptions.filter((o) => o.text.trim() !== ""),
+    });
   };
 
   return (
@@ -103,6 +131,50 @@ export function QuestionFormModal({
               placeholder="Notas para el equipo creativo (opcional)"
             />
             <span className={styles.hint}>Máximo 500 caracteres.</span>
+          </div>
+
+          <div className={styles.optionsSection}>
+            <div className={styles.optionsSectionHeader}>
+              <span className={styles.label}>Opciones de respuesta</span>
+              <ActionButton
+                type="button"
+                variant="ghost"
+                onClick={addOption}
+                disabled={submitting}
+              >
+                + Añadir opción
+              </ActionButton>
+            </div>
+
+            {inlineOptions.length === 0 ? (
+              <p className={styles.hint}>
+                Sin opciones. Hacé clic en &ldquo;+ Añadir opción&rdquo; para agregar.
+              </p>
+            ) : (
+              <div className={styles.optionsList}>
+                {inlineOptions.map((option, index) => (
+                  <div key={index} className={styles.optionRow}>
+                    <input
+                      type="text"
+                      className={`${styles.input} ${styles.optionInput}`}
+                      value={option.text}
+                      onChange={(e) => updateOption(index, e.target.value)}
+                      placeholder={`Opción ${index + 1}`}
+                      disabled={submitting}
+                    />
+                    <ActionButton
+                      type="button"
+                      variant="danger"
+                      onClick={() => removeOption(index)}
+                      disabled={submitting}
+                      aria-label={`Eliminar opción ${index + 1}`}
+                    >
+                      ×
+                    </ActionButton>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {error && <div className={styles.error}>{error}</div>}
