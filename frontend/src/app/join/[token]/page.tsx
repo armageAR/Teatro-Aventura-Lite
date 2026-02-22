@@ -76,12 +76,16 @@ export default function JoinPage() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [joinData, setJoinData] = useState<JoinResponseApi | null>(null);
   const [currentState, setCurrentState] = useState<CurrentStateApi | null>(
     null
   );
   const [voteLoading, setVoteLoading] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
 
   const storageKey = `spectator_session_${token}`;
 
@@ -177,10 +181,12 @@ export default function JoinPage() {
     } catch (err) {
       if (isAxiosError(err)) {
         if (err.response?.status === 404) {
+          setIsNotFound(true);
           setError(
             "Función no encontrada. Verificá que el código QR sea correcto."
           );
         } else {
+          setIsNotFound(false);
           setError("Error al unirte a la función. Intentá de nuevo.");
         }
       } else {
@@ -273,6 +279,45 @@ export default function JoinPage() {
     };
   }, [joinData, fetchCurrent]);
 
+  // Network connectivity recovery
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      const d = joinDataRef.current;
+      if (d) {
+        // Active session: reset backoff, cancel pending timer, poll immediately
+        pollErrorCountRef.current = 0;
+        if (pollTimerRef.current) {
+          clearTimeout(pollTimerRef.current);
+          pollTimerRef.current = null;
+        }
+        fetchCurrent(d.performance_id, d.spectator_session_id).then(() => {
+          scheduleRef.current?.();
+        });
+      } else {
+        // No session yet (join failed while offline): auto-retry
+        join();
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      // Cancel pending poll timer; it will restart when we come back online
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [join, fetchCurrent]);
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -289,6 +334,15 @@ export default function JoinPage() {
         <div className={styles.container}>
           <div className={styles.errorBox}>
             <p>{error}</p>
+            {!isNotFound && (
+              <button
+                className={styles.retryButton}
+                onClick={join}
+                disabled={loading}
+              >
+                {loading ? "Reintentando..." : "Reintentar"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -304,6 +358,11 @@ export default function JoinPage() {
 
   return (
     <div className={styles.page}>
+      {!isOnline && (
+        <div className={styles.offlineBanner}>
+          Sin conexión — reconectando automáticamente...
+        </div>
+      )}
       <div className={styles.container}>
         <div className={styles.welcomeBox}>
           <h1 className={styles.title}>¡Bienvenido!</h1>
