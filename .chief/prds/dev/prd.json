@@ -1,0 +1,223 @@
+{
+  "project": "Teatro Aventura Lite",
+  "description": "Aplicación web para votación interactiva en obras de teatro donde el público se une escaneando un QR y responde una pregunta activa a la vez en su celular. El operador (Productor) puede enviar preguntas al público, cerrar la votación, ver resultados y seleccionar una respuesta ganadora. MVP orientado a validar el concepto con roles de Administrador, Productor y Público, en redes móviles inestables y sin fricción para el usuario.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Reutilización del sistema de autenticación Keycloak existente",
+      "description": "Como desarrollador, quiero que el MVP se integre con el sistema de autenticación Keycloak ya existente, sin duplicar ni reimplementar login, refresh de token, validación de token ni autorización básica, para mantener coherencia arquitectónica y evitar deuda técnica.",
+      "acceptanceCriteria": [
+        "No se agrega un segundo sistema de autenticación al proyecto",
+        "No se crean endpoints duplicados para autenticación",
+        "El MVP utiliza los helpers y middlewares de Keycloak ya existentes",
+        "El flujo de login, refresh de token y validación reutilizan la implementación actual",
+        "La implementación del MVP se integra con el flujo de auth existente"
+      ],
+      "priority": 1,
+      "passes": true
+    },
+    {
+      "id": "US-002",
+      "title": "Administrador gestiona usuarios y asigna roles",
+      "description": "Como Administrador, quiero poder crear, leer, actualizar y eliminar usuarios del sistema y asignarles roles (Admin o Producer), para mantener el control de acceso a la plataforma y gestionar quién puede operar las performances.",
+      "acceptanceCriteria": [
+        "El Administrador puede crear nuevos usuarios",
+        "El Administrador puede ver la lista de usuarios existentes",
+        "El Administrador puede editar la información de un usuario",
+        "El Administrador puede eliminar usuarios",
+        "El Administrador puede asignar el rol de Admin o Producer a cada usuario",
+        "El Administrador tiene acceso total a Plays y Performances"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-003",
+      "title": "Productor crea y gestiona Plays (obras de teatro)",
+      "description": "Como Productor, quiero poder crear, editar y eliminar obras de teatro (Plays) con sus datos básicos, para organizar el contenido que se usará en las performances interactivas.",
+      "acceptanceCriteria": [
+        "El Productor puede crear un Play con título obligatorio, descripción opcional y URL de imagen de portada opcional",
+        "El Productor puede editar los datos de un Play existente",
+        "El Productor puede eliminar un Play",
+        "El Administrador también puede realizar todas estas operaciones",
+        "La interfaz muestra una lista de Plays disponibles"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "US-004",
+      "title": "Productor crea y gestiona Questions con AnswerOptions inline",
+      "description": "Como Productor, quiero poder crear, editar y eliminar preguntas (Questions) para un Play con sus opciones de respuesta (AnswerOptions) incluidas de forma inline, y mantener un orden definido para la secuencia de preguntas dentro de la obra.",
+      "acceptanceCriteria": [
+        "El Productor puede crear una Question con texto de pregunta y sus AnswerOptions inline en el mismo formulario",
+        "Cada AnswerOption tiene al menos un campo de texto de opción",
+        "El Productor puede editar una Question y sus opciones existentes",
+        "El Productor puede eliminar una Question",
+        "Las preguntas mantienen un order_index para definir su secuencia dentro del Play",
+        "El Administrador también puede realizar todas estas operaciones"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "US-005",
+      "title": "Productor crea una Performance para un Play",
+      "description": "Como Productor, quiero poder crear una Performance (función) asociada a un Play existente, para poder llevar a cabo una sesión de votación interactiva con el público en una fecha y contexto específicos.",
+      "acceptanceCriteria": [
+        "El Productor puede crear una Performance asociada a un Play existente",
+        "La Performance se crea en estado draft",
+        "La Performance tiene un join_token único e impredecible (UUID o equivalente aleatorio)",
+        "El Productor puede ver el detalle de la Performance creada",
+        "El Administrador también puede realizar esta operación"
+      ],
+      "priority": 5,
+      "passes": false
+    },
+    {
+      "id": "US-006",
+      "title": "Productor genera y visualiza el QR de acceso a la Performance",
+      "description": "Como Productor, quiero poder obtener el QR y la URL de join de una Performance, para poder compartirlo con el público antes o durante la función y facilitar el acceso sin fricción.",
+      "acceptanceCriteria": [
+        "El sistema genera una URL única de join basada en el join_token de la Performance",
+        "El Productor puede ver el código QR generado para la Performance",
+        "El Productor puede ver la URL de join junto al QR",
+        "El join_token es único y no adivinable (UUID o equivalente)",
+        "Existe un endpoint GET /api/performances/:id/qr que devuelve la URL o token"
+      ],
+      "priority": 6,
+      "passes": false
+    },
+    {
+      "id": "US-007",
+      "title": "Productor inicia y cierra una Performance en vivo",
+      "description": "Como Productor, quiero poder iniciar (start) y cerrar (close) una Performance, para controlar el ciclo de vida completo de la función interactiva desde la sala.",
+      "acceptanceCriteria": [
+        "El Productor puede hacer start de una Performance en estado draft, cambiando su estado a live",
+        "El Productor puede cerrar una Performance en estado live, cambiando su estado a closed",
+        "Los estados posibles de la Performance son: draft, live, closed (y canceled si es necesario)",
+        "La operación de start y close es idempotente y segura ante reintentos",
+        "El cambio de estado se refleja correctamente en la vista del Productor"
+      ],
+      "priority": 7,
+      "passes": false
+    },
+    {
+      "id": "US-008",
+      "title": "Productor envía y cierra preguntas durante la Performance",
+      "description": "Como Productor, quiero poder seleccionar una pregunta y enviarla (send) al público durante una Performance activa, y luego cerrar la votación (close) para esa pregunta, de forma que en todo momento solo haya una pregunta activa a la vez.",
+      "acceptanceCriteria": [
+        "Solo puede haber 1 pregunta activa por Performance en cualquier momento",
+        "El Productor puede seleccionar una Question y hacer send, convirtiéndola en la pregunta activa de la Performance",
+        "El público recibe la pregunta activa vía polling en un máximo de 3 segundos",
+        "El Productor puede cerrar (close) la votación de la pregunta activa",
+        "Al cerrar la votación, no se aceptan más votos para esa pregunta",
+        "Las operaciones send y close son idempotentes"
+      ],
+      "priority": 8,
+      "passes": false
+    },
+    {
+      "id": "US-009",
+      "title": "Productor visualiza resultados en tiempo real durante la Performance",
+      "description": "Como Productor, quiero poder ver los resultados de votación en tiempo real para la pregunta activa o cerrada, incluyendo conteo y porcentajes por opción, para monitorear la participación del público durante la función.",
+      "acceptanceCriteria": [
+        "El Productor puede ver el conteo de votos por cada AnswerOption",
+        "El Productor puede ver el porcentaje de votos por cada AnswerOption",
+        "Los resultados se actualizan durante la votación activa",
+        "Los resultados son visibles al menos para la pregunta activa y las preguntas cerradas",
+        "Existe un endpoint GET /api/performances/:id/live que devuelve conteos y porcentajes"
+      ],
+      "priority": 9,
+      "passes": false
+    },
+    {
+      "id": "US-010",
+      "title": "Productor selecciona la respuesta ganadora de una pregunta",
+      "description": "Como Productor, quiero poder seleccionar manualmente una opción ganadora para una pregunta en una Performance, aunque no sea la opción más votada, para tener control narrativo sobre el resultado de la obra.",
+      "acceptanceCriteria": [
+        "El Productor puede designar cualquier AnswerOption como ganadora para una Question en una Performance",
+        "La opción ganadora no tiene que coincidir con la opción más votada",
+        "El sistema guarda el winning_answer_option_id correctamente asociado a la Performance y Question",
+        "Esta acción está disponible después de cerrar la votación de la pregunta"
+      ],
+      "priority": 10,
+      "passes": false
+    },
+    {
+      "id": "US-011",
+      "title": "Público se une a la Performance escaneando un QR sin necesidad de registro",
+      "description": "Como miembro del público, quiero poder unirme a una Performance escaneando un QR con mi celular sin necesidad de crear una cuenta ni iniciar sesión, para participar en la votación de forma inmediata y sin fricción.",
+      "acceptanceCriteria": [
+        "El usuario puede acceder a la Performance escaneando el QR o abriendo la URL de join directamente",
+        "No se requiere registro ni login para acceder como espectador",
+        "El backend crea o actualiza una SpectatorSession con un id temporal al hacer join",
+        "El spectator_session_id se guarda en localStorage y/o cookie del navegador del espectador",
+        "Si se pierde el spectator_session_id, el sistema puede crear una nueva sesión sin interrumpir la Performance",
+        "Existe un endpoint POST /api/performances/join que acepta el token y devuelve el spectator_session_id"
+      ],
+      "priority": 11,
+      "passes": false
+    },
+    {
+      "id": "US-012",
+      "title": "Público visualiza el estado actual de la Performance",
+      "description": "Como miembro del público, quiero poder ver la información básica del Play y el estado actual de la Performance (esperando, pregunta activa, votación cerrada), para saber qué está ocurriendo en la función y cuándo puedo participar.",
+      "acceptanceCriteria": [
+        "El público puede ver información básica del Play al menos su título",
+        "El público ve el mensaje correcto para cada estado: esperando que comience, pregunta activa, o votación cerrada",
+        "Si hay una pregunta activa, el público la puede ver con sus opciones de respuesta",
+        "Si el espectador ya votó en la pregunta activa, ve la confirmación de su voto registrado",
+        "La pantalla de landing muestra el estado correcto en tiempo real mediante polling"
+      ],
+      "priority": 12,
+      "passes": false
+    },
+    {
+      "id": "US-013",
+      "title": "Público vota en la pregunta activa de forma idempotente",
+      "description": "Como miembro del público, quiero poder emitir mi voto para la pregunta activa de la Performance con la garantía de que solo se contará una vez aunque reintente el envío, para participar de forma segura aunque mi conexión móvil sea inestable.",
+      "acceptanceCriteria": [
+        "El público puede seleccionar una AnswerOption y enviar su voto",
+        "Solo se permite 1 voto por spectator_session por Question",
+        "El cliente envía un client_vote_id (UUID) para permitir deduplicación en el servidor",
+        "Si el cliente reintenta el voto con el mismo client_vote_id, el sistema devuelve el mismo resultado sin duplicar el conteo",
+        "El público ve una confirmación de que su voto fue registrado correctamente",
+        "No se puede votar si la votación de la pregunta está cerrada",
+        "La restricción UNIQUE (performance_id, question_id, spectator_session_id) se aplica a nivel de base de datos"
+      ],
+      "priority": 13,
+      "passes": false
+    },
+    {
+      "id": "US-014",
+      "title": "Polling robusto para recibir actualizaciones en tiempo real",
+      "description": "Como miembro del público, quiero que mi dispositivo consulte automáticamente el estado actual de la Performance cada pocos segundos con manejo inteligente de errores y bajo consumo de batería cuando la app está en segundo plano, para mantenerme sincronizado aunque la conexión sea inestable.",
+      "acceptanceCriteria": [
+        "El cliente hace polling al endpoint de estado actual cada 2-3 segundos mientras la pestaña está activa",
+        "Cuando la pestaña está en background o la pantalla está bloqueada, el intervalo aumenta a 10-15 segundos",
+        "Ante errores como timeout, 5xx o falta de red se aplica exponential backoff con jitter",
+        "El endpoint de estado devuelve: estado de la Performance, pregunta activa si existe, si el espectador ya votó, y resultados resumidos si aplica",
+        "La respuesta incluye state_version o updated_at para permitir respuestas de tipo 304 sin cambios",
+        "Al cargar la página siempre se solicita el estado actual completo sin depender de eventos previos perdidos",
+        "Existe un endpoint GET /api/performances/:id/current para el estado del espectador"
+      ],
+      "priority": 14,
+      "passes": false
+    },
+    {
+      "id": "US-015",
+      "title": "Recuperación automática de estado tras pérdida de conexión",
+      "description": "Como miembro del público, quiero que la aplicación se recupere automáticamente cuando vuelve la conexión después de una pérdida de 30-60 segundos o tras reabrir el navegador, mostrando la pregunta activa correcta sin duplicar votos, para tener una experiencia robusta en redes móviles inestables.",
+      "acceptanceCriteria": [
+        "Si el público pierde internet por 30-60 segundos y vuelve, la página se recupera sola sin intervención del usuario",
+        "Al recuperar la conexión, la app muestra la pregunta activa correcta en el estado actual de la Performance",
+        "Los reintentos de voto no duplican el conteo gracias a la deduplicación por client_vote_id",
+        "La app maneja correctamente la reconexión tras suspensión de pantalla, cambio de red o cierre y reapertura del navegador",
+        "Si el spectator_session_id se pierde del localStorage, se crea una nueva sesión sin romper la Performance en curso"
+      ],
+      "priority": 15,
+      "passes": false
+    }
+  ]
+}
