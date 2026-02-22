@@ -43,7 +43,7 @@
         "La interfaz muestra una lista de Plays disponibles"
       ],
       "priority": 3,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-004",

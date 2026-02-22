@@ -10,6 +10,9 @@
 - Admin role check: `realm_access` in JWT is stdClass in prod, plain array in tests — handle both cases
 - To mock admin in tests: `$this->withKeycloakToken(['realm_access' => ['roles' => ['admin']]])`
 - User model: has `keycloak_sub` (nullable, unique) and `role` (admin/producer) columns; no soft deletes on User
+- Column alteration without doctrine/dbal: use `DB::statement('ALTER TABLE X ALTER COLUMN Y ...')` raw SQL in migrations
+- Frontend API response mapping: use `normalizeWork()` style functions to map snake_case API keys to camelCase TypeScript types
+- Play model: has `title` (required), `description` (nullable), `cover_image_url` (nullable) columns
 
 ---
 
@@ -50,4 +53,22 @@
   - Admin role check mock: `$this->withKeycloakToken(['realm_access' => ['roles' => ['admin']]])`
   - Frontend admin check: `keycloak.tokenParsed.realm_access?.roles?.includes('admin')`
   - SCSS module class names can't start with a digit; use `role_admin`/`role_producer` not `role-admin`
+---
+
+## 2026-02-22 - US-003
+- Added `cover_image_url` (nullable, varchar 2048) to the plays table via new migration
+- Made `description` nullable via raw SQL `ALTER TABLE plays ALTER COLUMN description DROP NOT NULL` (no doctrine/dbal)
+- Updated `Play` model: added `cover_image_url` to `$fillable`
+- Updated `PlayController`: `description` is now `nullable`, added `cover_image_url` as `nullable|url|max:2048` in both `store` and `update`
+- Updated `PlayManagementTest`: fixed `test_store_validates_required_fields` to not expect `description` as required; added `test_store_accepts_optional_description_and_cover_image_url` and `test_store_accepts_cover_image_url`
+- Updated frontend `Work` type: added `coverImageUrl?: string | null`
+- Updated `WorkFormModal`: added `coverImageUrl` to `WorkPayload` type, state, form field (URL input), and submit handler
+- Updated `obras/page.tsx`: updated `WorkApi` type, `normalizeWork`, `handleSubmitWork` to handle `cover_image_url`
+- All 57 backend tests pass; frontend typecheck + lint + build all clean
+- Files changed: `2026_02_22_200000_update_plays_add_cover_image_url.php`, `Play.php`, `PlayController.php`, `PlayManagementTest.php`, `WorksTable.tsx`, `WorkFormModal.tsx`, `obras/page.tsx`
+- **Learnings for future iterations:**
+  - `doctrine/dbal` is NOT installed — use `DB::statement()` for raw SQL column alterations
+  - When adding nullable columns to existing tables, create a new migration (never modify the original)
+  - Frontend `normalizeWork()` function in `obras/page.tsx` maps snake_case API fields to camelCase; update both `WorkApi` type and `normalizeWork` when adding new columns
+  - `handleSubmitWork` in `obras/page.tsx` maps camelCase payload back to snake_case for the API
 ---
