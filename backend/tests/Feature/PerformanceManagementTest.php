@@ -266,4 +266,100 @@ class PerformanceManagementTest extends TestCase
 
         $this->getJson("/api/performances/{$performance->id}/qr")->assertUnauthorized();
     }
+
+    public function test_authenticated_users_can_start_a_draft_performance(): void
+    {
+        $this->withKeycloakToken();
+
+        $performance = Performance::factory()->create(['status' => 'draft']);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/start");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'live']);
+
+        $this->assertDatabaseHas('performances', [
+            'id' => $performance->id,
+            'status' => 'live',
+        ]);
+
+        $this->assertNotNull($performance->fresh()->started_at);
+    }
+
+    public function test_starting_a_live_performance_is_idempotent(): void
+    {
+        $this->withKeycloakToken();
+
+        $performance = Performance::factory()->create(['status' => 'live']);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/start");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'live']);
+    }
+
+    public function test_cannot_start_a_closed_performance(): void
+    {
+        $this->withKeycloakToken();
+
+        $performance = Performance::factory()->create(['status' => 'closed']);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/start");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_authenticated_users_can_close_a_live_performance(): void
+    {
+        $this->withKeycloakToken();
+
+        $performance = Performance::factory()->create(['status' => 'live']);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/close");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'closed']);
+
+        $this->assertDatabaseHas('performances', [
+            'id' => $performance->id,
+            'status' => 'closed',
+        ]);
+
+        $this->assertNotNull($performance->fresh()->ended_at);
+    }
+
+    public function test_closing_a_closed_performance_is_idempotent(): void
+    {
+        $this->withKeycloakToken();
+
+        $performance = Performance::factory()->create(['status' => 'closed']);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/close");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'closed']);
+    }
+
+    public function test_cannot_close_a_draft_performance(): void
+    {
+        $this->withKeycloakToken();
+
+        $performance = Performance::factory()->create(['status' => 'draft']);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/close");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_guests_cannot_access_start_and_close_endpoints(): void
+    {
+        $performance = Performance::factory()->create();
+
+        $this->patchJson("/api/performances/{$performance->id}/start")->assertUnauthorized();
+        $this->patchJson("/api/performances/{$performance->id}/close")->assertUnauthorized();
+    }
 }

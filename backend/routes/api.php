@@ -68,6 +68,8 @@ Route::middleware('keycloak')->group(function () {
     Route::apiResource('plays.performances', PerformanceController::class)->shallow();
     Route::patch('performances/{performance}/restore', [PerformanceController::class, 'restore'])->name('performances.restore');
     Route::get('performances/{performance}/qr', [PerformanceController::class, 'qr'])->name('performances.qr');
+    Route::patch('performances/{performance}/start', [PerformanceController::class, 'start'])->name('performances.start');
+    Route::patch('performances/{performance}/close', [PerformanceController::class, 'close'])->name('performances.close');
 });
 
 

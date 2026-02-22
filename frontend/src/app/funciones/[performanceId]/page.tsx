@@ -54,6 +54,8 @@ export default function PerformanceDetailPage() {
   const [performance, setPerformance] = useState<PerformanceDetailApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchPerformance = useCallback(async () => {
     setLoading(true);
@@ -73,6 +75,42 @@ export default function PerformanceDetailPage() {
       }
     } finally {
       setLoading(false);
+    }
+  }, [api, performanceId]);
+
+  const handleStart = useCallback(async () => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const response = await api.patch<PerformanceDetailApi>(`/api/performances/${performanceId}/start`);
+      setPerformance(response.data);
+    } catch (err) {
+      if (isAxiosError(err)) {
+        const message = err.response?.data?.message as string | undefined;
+        setActionError(message ?? "No se pudo iniciar la función.");
+      } else {
+        setActionError("No se pudo iniciar la función.");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  }, [api, performanceId]);
+
+  const handleClose = useCallback(async () => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const response = await api.patch<PerformanceDetailApi>(`/api/performances/${performanceId}/close`);
+      setPerformance(response.data);
+    } catch (err) {
+      if (isAxiosError(err)) {
+        const message = err.response?.data?.message as string | undefined;
+        setActionError(message ?? "No se pudo cerrar la función.");
+      } else {
+        setActionError("No se pudo cerrar la función.");
+      }
+    } finally {
+      setActionLoading(false);
     }
   }, [api, performanceId]);
 
@@ -150,6 +188,34 @@ export default function PerformanceDetailPage() {
             <dd className={`${styles.detailValue} ${styles.token}`}>{performance.uid}</dd>
           </div>
         </dl>
+
+        <section className={styles.actionsSection}>
+          <h2 className={styles.actionsHeading}>Acciones</h2>
+          {actionError && <p className={styles.actionError}>{actionError}</p>}
+          <div className={styles.actionsRow}>
+            {performance.status === "draft" && (
+              <button
+                className={styles.btnStart}
+                onClick={handleStart}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Iniciando..." : "Iniciar función"}
+              </button>
+            )}
+            {performance.status === "live" && (
+              <button
+                className={styles.btnClose}
+                onClick={handleClose}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Cerrando..." : "Cerrar función"}
+              </button>
+            )}
+            {performance.status === "closed" && (
+              <p className={styles.statusMessage}>La función ha sido cerrada.</p>
+            )}
+          </div>
+        </section>
 
         <section className={styles.qrSection}>
           <h2 className={styles.qrHeading}>Código QR de acceso</h2>

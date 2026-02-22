@@ -93,4 +93,40 @@ class PerformanceController extends Controller
             'join_token' => $performance->join_token,
         ]);
     }
+
+    public function start(Performance $performance): JsonResponse
+    {
+        if ($performance->status === 'live') {
+            return response()->json($performance->load('play'));
+        }
+
+        if ($performance->status !== 'draft') {
+            abort(422, 'Solo se puede iniciar una función en estado borrador.');
+        }
+
+        $performance->update([
+            'status' => 'live',
+            'started_at' => now(),
+        ]);
+
+        return response()->json($performance->fresh()->load('play'));
+    }
+
+    public function close(Performance $performance): JsonResponse
+    {
+        if ($performance->status === 'closed') {
+            return response()->json($performance->load('play'));
+        }
+
+        if ($performance->status !== 'live') {
+            abort(422, 'Solo se puede cerrar una función en estado en vivo.');
+        }
+
+        $performance->update([
+            'status' => 'closed',
+            'ended_at' => now(),
+        ]);
+
+        return response()->json($performance->fresh()->load('play'));
+    }
 }
