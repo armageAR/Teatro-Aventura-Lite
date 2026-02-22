@@ -41,6 +41,7 @@ type PerformanceQuestionApi = {
   performance_status: "pending" | "active" | "closed";
   sent_at?: string | null;
   closed_at?: string | null;
+  winning_answer_option_id?: number | null;
 };
 
 type LiveOptionApi = {
@@ -60,6 +61,7 @@ type LiveQuestionApi = {
   closed_at: string | null;
   total_votes: number;
   options: LiveOptionApi[];
+  winning_answer_option_id?: number | null;
 };
 
 type LiveResultsApi = {
@@ -110,6 +112,7 @@ export default function PerformanceDetailPage() {
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [questionActionLoading, setQuestionActionLoading] = useState<number | null>(null);
   const [questionActionError, setQuestionActionError] = useState<string | null>(null);
+  const [winnerActionLoading, setWinnerActionLoading] = useState<string | null>(null);
 
   const [liveResults, setLiveResults] = useState<LiveResultsApi | null>(null);
 
@@ -240,6 +243,32 @@ export default function PerformanceDetailPage() {
         }
       } finally {
         setQuestionActionLoading(null);
+      }
+    },
+    [api, performanceId, fetchLiveResults],
+  );
+
+  const handleSetWinner = useCallback(
+    async (questionId: number, optionId: number) => {
+      const key = `${questionId}-${optionId}`;
+      setWinnerActionLoading(key);
+      setQuestionActionError(null);
+      try {
+        const response = await api.patch<PerformanceQuestionApi>(
+          `/api/performances/${performanceId}/questions/${questionId}/winner`,
+          { answer_option_id: optionId },
+        );
+        setQuestions((prev) => prev.map((q) => (q.id === questionId ? response.data : q)));
+        fetchLiveResults();
+      } catch (err) {
+        if (isAxiosError(err)) {
+          const message = err.response?.data?.message as string | undefined;
+          setQuestionActionError(message ?? "No se pudo guardar el ganador.");
+        } else {
+          setQuestionActionError("No se pudo guardar el ganador.");
+        }
+      } finally {
+        setWinnerActionLoading(null);
       }
     },
     [api, performanceId, fetchLiveResults],
@@ -406,28 +435,62 @@ export default function PerformanceDetailPage() {
                   </span>
                 </div>
                 {liveQ ? (
-                  <ul className={styles.resultsList}>
-                    {liveQ.options.map((opt) => (
-                      <li key={opt.id} className={styles.resultItem}>
-                        <div className={styles.resultHeader}>
-                          <span className={styles.resultText}>{opt.text}</span>
-                          <span className={styles.resultCount}>
-                            {opt.vote_count} voto{opt.vote_count !== 1 ? "s" : ""}{" "}
-                            <span className={styles.resultPct}>({opt.vote_percentage}%)</span>
-                          </span>
-                        </div>
-                        <div className={styles.resultBar}>
-                          <div
-                            className={styles.resultBarFill}
-                            style={{ width: `${opt.vote_percentage}%` }}
-                          />
-                        </div>
+                  <>
+                    <ul className={styles.resultsList}>
+                      {liveQ.options.map((opt) => {
+                        const isWinner = liveQ.winning_answer_option_id === opt.id;
+                        return (
+                          <li
+                            key={opt.id}
+                            className={`${styles.resultItem} ${isWinner ? styles.resultItemWinner : ""}`}
+                          >
+                            <div className={styles.resultHeader}>
+                              <span className={styles.resultText}>
+                                {opt.text}
+                                {isWinner && (
+                                  <span className={styles.winnerBadge}>Ganadora</span>
+                                )}
+                              </span>
+                              <span className={styles.resultCount}>
+                                {opt.vote_count} voto{opt.vote_count !== 1 ? "s" : ""}{" "}
+                                <span className={styles.resultPct}>({opt.vote_percentage}%)</span>
+                              </span>
+                            </div>
+                            <div className={styles.resultBar}>
+                              <div
+                                className={`${styles.resultBarFill} ${isWinner ? styles.resultBarFillWinner : ""}`}
+                                style={{ width: `${opt.vote_percentage}%` }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      })}
+                      <li className={styles.resultTotal}>
+                        Total: {liveQ.total_votes} voto{liveQ.total_votes !== 1 ? "s" : ""}
                       </li>
-                    ))}
-                    <li className={styles.resultTotal}>
-                      Total: {liveQ.total_votes} voto{liveQ.total_votes !== 1 ? "s" : ""}
-                    </li>
-                  </ul>
+                    </ul>
+                    {liveQ.performance_status === "closed" && (
+                      <div className={styles.winnerActions}>
+                        <span className={styles.winnerActionsLabel}>Seleccionar ganadora:</span>
+                        <div className={styles.winnerActionsRow}>
+                          {liveQ.options.map((opt) => {
+                            const isWinner = liveQ.winning_answer_option_id === opt.id;
+                            const loadingKey = `${q.id}-${opt.id}`;
+                            return (
+                              <button
+                                key={opt.id}
+                                className={`${styles.btnWinner} ${isWinner ? styles.btnWinnerActive : ""}`}
+                                onClick={() => handleSetWinner(q.id, opt.id)}
+                                disabled={winnerActionLoading === loadingKey}
+                              >
+                                {opt.text}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   q.options.length > 0 && (
                     <ul className={styles.optionsList}>

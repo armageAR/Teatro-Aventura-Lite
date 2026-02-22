@@ -383,6 +383,87 @@
   margin-top: 0.1rem;
 }
 
+.resultItemWinner {
+  border-left: 3px solid #ffc107;
+  padding-left: 0.5rem;
+  background: rgba(255, 193, 7, 0.05);
+  border-radius: 4px;
+}
+
+.winnerBadge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
+
+.resultBarFillWinner {
+  background: #ffc107;
+}
+
+.winnerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(245, 245, 245, 0.08);
+}
+
+.winnerActionsLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(245, 245, 245, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.winnerActionsRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btnWinner {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid rgba(245, 245, 245, 0.2);
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: rgba(245, 245, 245, 0.06);
+  color: rgba(245, 245, 245, 0.7);
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.4);
+    color: #ffc107;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btnWinnerActive {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.6);
+  color: #ffc107;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 193, 7, 0.3);
+  }
+}
+
 .qrSection {
   display: flex;
   flex-direction: column;

@@ -12,6 +12,7 @@ class PerformanceQuestion extends Model
         'question_id',
         'sent_at',
         'closed_at',
+        'winning_answer_option_id',
     ];
 
     protected $casts = [

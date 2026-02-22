@@ -690,4 +690,179 @@ class PerformanceManagementTest extends TestCase
 
         $this->getJson("/api/performances/{$performance->id}/live")->assertUnauthorized();
     }
+
+    public function test_producer_can_set_winner_on_closed_question(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+        $opt2 = QuestionOption::factory()->for($question)->create(['order' => 2]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now()->subMinutes(5),
+            'closed_at' => now(),
+        ]);
+
+        $response = $this->patchJson(
+            "/api/performances/{$performance->id}/questions/{$question->id}/winner",
+            ['answer_option_id' => $opt2->id],
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['winning_answer_option_id' => $opt2->id])
+            ->assertJsonFragment(['performance_status' => 'closed']);
+
+        $this->assertDatabaseHas('performance_questions', [
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'winning_answer_option_id' => $opt2->id,
+        ]);
+    }
+
+    public function test_winner_can_be_any_option_not_just_most_voted(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+        $opt2 = QuestionOption::factory()->for($question)->create(['order' => 2]);
+
+        $pq = PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now()->subMinutes(5),
+            'closed_at' => now(),
+        ]);
+
+        // Cast 3 votes for opt1 → opt1 is the "most voted"
+        Vote::insert([
+            ['performance_question_id' => $pq->id, 'question_option_id' => $opt1->id, 'spectator_token' => 'a', 'client_vote_id' => 'cv1', 'created_at' => now(), 'updated_at' => now()],
+            ['performance_question_id' => $pq->id, 'question_option_id' => $opt1->id, 'spectator_token' => 'b', 'client_vote_id' => 'cv2', 'created_at' => now(), 'updated_at' => now()],
+            ['performance_question_id' => $pq->id, 'question_option_id' => $opt1->id, 'spectator_token' => 'c', 'client_vote_id' => 'cv3', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        // Producer selects opt2 (the less-voted option) as winner
+        $response = $this->patchJson(
+            "/api/performances/{$performance->id}/questions/{$question->id}/winner",
+            ['answer_option_id' => $opt2->id],
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['winning_answer_option_id' => $opt2->id]);
+    }
+
+    public function test_cannot_set_winner_on_question_that_is_not_closed(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now(),
+            'closed_at' => null, // still active
+        ]);
+
+        $response = $this->patchJson(
+            "/api/performances/{$performance->id}/questions/{$question->id}/winner",
+            ['answer_option_id' => $opt1->id],
+        );
+
+        $response->assertStatus(422);
+    }
+
+    public function test_cannot_set_winner_on_pending_question(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+
+        // No PerformanceQuestion record → question is pending
+        $response = $this->patchJson(
+            "/api/performances/{$performance->id}/questions/{$question->id}/winner",
+            ['answer_option_id' => $opt1->id],
+        );
+
+        $response->assertStatus(422);
+    }
+
+    public function test_cannot_set_winner_with_option_from_different_question(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $otherQuestion = Question::factory()->for($play)->create(['order' => 2]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+        $otherOpt = QuestionOption::factory()->for($otherQuestion)->create(['order' => 1]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now()->subMinutes(5),
+            'closed_at' => now(),
+        ]);
+
+        $response = $this->patchJson(
+            "/api/performances/{$performance->id}/questions/{$question->id}/winner",
+            ['answer_option_id' => $otherOpt->id],
+        );
+
+        $response->assertStatus(422);
+    }
+
+    public function test_set_winner_is_idempotent_can_change_winner(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+        $opt1 = QuestionOption::factory()->for($question)->create(['order' => 1]);
+        $opt2 = QuestionOption::factory()->for($question)->create(['order' => 2]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now()->subMinutes(5),
+            'closed_at' => now(),
+            'winning_answer_option_id' => $opt1->id,
+        ]);
+
+        // Change winner to opt2
+        $response = $this->patchJson(
+            "/api/performances/{$performance->id}/questions/{$question->id}/winner",
+            ['answer_option_id' => $opt2->id],
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['winning_answer_option_id' => $opt2->id]);
+    }
+
+    public function test_guests_cannot_access_set_winner_endpoint(): void
+    {
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create();
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/winner", [])->assertUnauthorized();
+    }
 }

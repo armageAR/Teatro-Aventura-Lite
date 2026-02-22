@@ -163,6 +163,7 @@ class PerformanceController extends Controller
                 'performance_status' => $status,
                 'sent_at' => $pq?->sent_at,
                 'closed_at' => $pq?->closed_at,
+                'winning_answer_option_id' => $pq?->winning_answer_option_id,
             ];
         });
 
@@ -284,6 +285,7 @@ class PerformanceController extends Controller
                 'closed_at' => $pq->closed_at,
                 'total_votes' => (int) $totalVotes,
                 'options' => $options,
+                'winning_answer_option_id' => $pq->winning_answer_option_id,
             ];
         });
 
@@ -292,6 +294,37 @@ class PerformanceController extends Controller
             'status' => $performance->status,
             'questions' => $questions,
         ]);
+    }
+
+    public function setWinner(Performance $performance, Question $question, Request $request): JsonResponse
+    {
+        if ((int) $question->play_id !== (int) $performance->play_id) {
+            abort(422, 'La pregunta no pertenece a esta función.');
+        }
+
+        $pq = PerformanceQuestion::where([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+        ])->first();
+
+        if (!$pq || !$pq->closed_at) {
+            abort(422, 'La votación de la pregunta debe estar cerrada antes de seleccionar un ganador.');
+        }
+
+        $data = $request->validate([
+            'answer_option_id' => ['required', 'integer', 'exists:question_options,id'],
+        ]);
+
+        // Ensure the option belongs to this question
+        $question->loadMissing('options');
+        $optionIds = $question->options->pluck('id')->all();
+        if (!in_array($data['answer_option_id'], $optionIds, true)) {
+            abort(422, 'La opción no pertenece a esta pregunta.');
+        }
+
+        $pq->update(['winning_answer_option_id' => $data['answer_option_id']]);
+
+        return response()->json($this->buildQuestionStatus($pq->fresh(), $question));
     }
 
     private function buildQuestionStatus(PerformanceQuestion $pq, Question $question): array
@@ -312,6 +345,7 @@ class PerformanceController extends Controller
             'performance_status' => $status,
             'sent_at' => $pq->sent_at,
             'closed_at' => $pq->closed_at,
+            'winning_answer_option_id' => $pq->winning_answer_option_id,
         ];
     }
 }
