@@ -4,6 +4,7 @@ use App\Http\Controllers\PlayController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuestionOptionController;
 use App\Http\Controllers\PerformanceController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\HealthCheck;
@@ -55,6 +56,8 @@ Route::get('/health', function () {
 // === AUTH PROTEGIDO (Keycloak) ===
 Route::middleware('keycloak')->group(function () {
     Route::get('/me', fn(Request $r) => response()->json($r->get('keycloak_user')));
+
+    Route::apiResource('users', UserController::class);
 
     Route::apiResource('plays', PlayController::class);
     Route::patch('plays/{play}/restore', [PlayController::class, 'restore'])->name('plays.restore');

@@ -7,7 +7,7 @@ import { UserMenu } from "@/components/user-menu/UserMenu";
 import styles from "./MenuBar.module.scss";
 
 export type MenuBarProps = {
-  user: { name: string; role: string } | null;
+  user: { name: string; role: string; isAdmin: boolean } | null;
   onLogin: () => void;
   onLogout: () => void;
 };
@@ -28,6 +28,11 @@ export function MenuBar({ user, onLogin, onLogout }: MenuBarProps) {
             <Link href="/funciones" className={styles.navLink}>
               Funciones
             </Link>
+            {user.isAdmin && (
+              <Link href="/usuarios" className={styles.navLink}>
+                Usuarios
+              </Link>
+            )}
           </nav>
         )}
       </div>

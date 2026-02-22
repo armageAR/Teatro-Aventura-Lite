@@ -34,10 +34,17 @@ export function AppShell({ children }: PropsWithChildren) {
     return "Usuario";
   };
 
+  const isAdmin = (): boolean => {
+    if (!keycloak.tokenParsed) return false;
+    const realmRoles = keycloak.tokenParsed.realm_access?.roles as string[] | undefined;
+    return Boolean(realmRoles?.includes("admin"));
+  };
+
   const user = authenticated && keycloak.tokenParsed
     ? {
         name: keycloak.tokenParsed.name as string || keycloak.tokenParsed.preferred_username as string || "Usuario",
         role: getUserRole(),
+        isAdmin: isAdmin(),
       }
     : null;
 
