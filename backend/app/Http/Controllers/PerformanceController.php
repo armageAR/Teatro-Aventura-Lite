@@ -42,7 +42,7 @@ class PerformanceController extends Controller
 
     public function show(Performance $performance): JsonResponse
     {
-        return response()->json($performance);
+        return response()->json($performance->load('play'));
     }
 
     public function update(Request $request, Performance $performance): JsonResponse

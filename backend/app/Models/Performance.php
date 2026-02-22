@@ -18,6 +18,8 @@ class Performance extends Model
      */
     protected $fillable = [
         'play_id',
+        'status',
+        'join_token',
         'uid',
         'scheduled_at',
         'location',
@@ -37,6 +39,12 @@ class Performance extends Model
         static::creating(function (Performance $performance) {
             if (empty($performance->uid)) {
                 $performance->uid = Str::upper(Str::random(12));
+            }
+            if (empty($performance->join_token)) {
+                $performance->join_token = Str::uuid()->toString();
+            }
+            if (empty($performance->status)) {
+                $performance->status = 'draft';
             }
         });
     }

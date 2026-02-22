@@ -85,17 +85,44 @@ class PerformanceManagementTest extends TestCase
             ->assertJsonFragment([
                 'location' => 'Teatro Colón',
                 'comment' => 'Función especial',
+                'status' => 'draft',
             ])
-            ->assertJsonStructure(['uid']);
+            ->assertJsonStructure(['uid', 'join_token']);
 
         $this->assertDatabaseHas('performances', [
             'play_id' => $play->id,
             'location' => 'Teatro Colón',
             'comment' => 'Función especial',
+            'status' => 'draft',
         ]);
 
         $playResponse = $this->getJson("/api/plays/{$play->id}");
         $playResponse->assertOk()->assertJsonFragment(['performances_count' => 1]);
+    }
+
+    public function test_performance_is_created_with_draft_status_and_unique_join_token(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+
+        $payload = [
+            'scheduled_at' => Carbon::now()->addDays(5)->toISOString(),
+            'location' => 'Teatro Colón',
+        ];
+
+        $response1 = $this->postJson("/api/plays/{$play->id}/performances", $payload);
+        $response2 = $this->postJson("/api/plays/{$play->id}/performances", $payload);
+
+        $response1->assertCreated()->assertJsonFragment(['status' => 'draft']);
+        $response2->assertCreated()->assertJsonFragment(['status' => 'draft']);
+
+        $token1 = $response1->json('join_token');
+        $token2 = $response2->json('join_token');
+
+        $this->assertNotEmpty($token1);
+        $this->assertNotEmpty($token2);
+        $this->assertNotEquals($token1, $token2);
     }
 
     public function test_store_validates_required_fields(): void
@@ -142,7 +169,9 @@ class PerformanceManagementTest extends TestCase
             ->assertJsonFragment([
                 'id' => $performance->id,
                 'uid' => $performance->uid,
-            ]);
+                'status' => 'draft',
+            ])
+            ->assertJsonStructure(['join_token', 'play']);
     }
 
     public function test_authenticated_users_can_update_a_performance(): void

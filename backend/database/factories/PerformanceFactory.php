@@ -20,6 +20,8 @@ class PerformanceFactory extends Factory
 
         return [
             'play_id' => Play::factory(),
+            'status' => 'draft',
+            'join_token' => Str::uuid()->toString(),
             'uid' => Str::upper(Str::random(12)),
             'scheduled_at' => $scheduled,
             'location' => $this->faker->city(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 
 import { useApi } from "@/hooks/useApi";
@@ -37,6 +38,7 @@ function normalizeWork(work: WorkApi): Work {
 
 export default function ObrasPage() {
   const api = useApi();
+  const router = useRouter();
   const [works, setWorks] = useState<Work[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -58,7 +60,6 @@ export default function ObrasPage() {
   const [performanceSubmitting, setPerformanceSubmitting] = useState(false);
   const [performanceError, setPerformanceError] = useState<string | null>(null);
   const [performanceWork, setPerformanceWork] = useState<Work | null>(null);
-  const [performanceMessage, setPerformanceMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -112,15 +113,6 @@ export default function ObrasPage() {
         .includes(term)
     );
   }, [works, debouncedSearch]);
-
-  useEffect(() => {
-    if (!performanceMessage) {
-      return;
-    }
-
-    const timer = setTimeout(() => setPerformanceMessage(null), 4000);
-    return () => clearTimeout(timer);
-  }, [performanceMessage]);
 
   const handleAddWork = () => {
     setFormMode("create");
@@ -187,9 +179,7 @@ export default function ObrasPage() {
     setPerformanceError(null);
 
     try {
-      const workTitle = performanceWork.title;
-
-      await api.post(`${WORKS_ENDPOINT}/${performanceWork.id}/performances`, {
+      const response = await api.post<{ id: number }>(`${WORKS_ENDPOINT}/${performanceWork.id}/performances`, {
         scheduled_at: payload.scheduledAt,
         location: payload.location,
         comment: payload.comment ? payload.comment : null,
@@ -197,7 +187,7 @@ export default function ObrasPage() {
 
       setPerformanceModalOpen(false);
       setPerformanceWork(null);
-      setPerformanceMessage(`Función creada para "${workTitle}".`);
+      router.push(`/funciones/${response.data.id}`);
     } catch (err) {
       if (isAxiosError(err)) {
         const message = err.response?.data?.message as string | undefined;
@@ -303,8 +293,6 @@ export default function ObrasPage() {
           onToggleDeleted={setShowDeleted}
           onAddWork={handleAddWork}
         />
-
-        {performanceMessage && <div className={styles.success}>{performanceMessage}</div>}
 
         <div className={styles.tableArea}>
           <WorksTable

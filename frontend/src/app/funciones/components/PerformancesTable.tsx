@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import styles from "./PerformancesTable.module.scss";
 
 type SortKey = "playTitle" | "scheduledAt" | "location";
@@ -95,6 +97,9 @@ export function PerformancesTable({
             <th className={styles.headCell} scope="col">
               Estado
             </th>
+            <th className={styles.headCell} scope="col">
+              Acciones
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -105,6 +110,11 @@ export function PerformancesTable({
               <td className={styles.bodyCell}>{performance.location || "-"}</td>
               <td className={`${styles.bodyCell} ${styles.status} ${performance.status === "upcoming" ? styles.statusUpcoming : styles.statusPast}`}>
                 {performance.status === "upcoming" ? "Futura" : "Pasada"}
+              </td>
+              <td className={styles.bodyCell}>
+                <Link href={`/funciones/${performance.id}`} className={styles.detailLink}>
+                  Ver detalle
+                </Link>
               </td>
             </tr>
           ))}
