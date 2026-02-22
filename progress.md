@@ -1,3 +1,24 @@
+## 2026-02-22 - US-014
+- Added `updated_at` field to `current()` response in `PerformanceController.php`: exposes `$performance->updated_at->toISOString()` for client-side state versioning
+- Added `test_current_response_includes_updated_at` to `SpectatorCurrentTest.php`: verifies field is present and matches ISO 8601 format (115 total pass)
+- Refactored frontend polling in `join/[token]/page.tsx`:
+  - Replaced `setInterval` with recursive `setTimeout` to allow dynamic interval adjustment each cycle
+  - Added `calcPollDelay(errorCount)`: base 3s when visible, 12s when backgrounded; exponential backoff doubles the base per consecutive error up to 60s cap; ±25% jitter applied to avoid thundering herd
+  - Added Page Visibility API handler (`visibilitychange`): when tab becomes visible → reset error count, fetch immediately, resume 3s cadence; when hidden → reschedule with 12s interval
+  - Added `pollErrorCountRef` (tracks consecutive failures), `joinDataRef` (avoids stale closure in timeout callbacks), `scheduleRef` (holds latest `scheduleNextPoll` for recursive calls)
+  - `fetchCurrent` now returns `Promise<boolean>` so polling loop can track success/failure
+  - Added `updated_at: string` to `CurrentStateApi` TypeScript type
+- All 115 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `PerformanceController.php`, `SpectatorCurrentTest.php`, `join/[token]/page.tsx`
+- **Learnings for future iterations:**
+  - Adaptive polling: use `setTimeout` (not `setInterval`) when intervals need to change dynamically; store latest schedule function in a ref to allow safe recursive calls without stale closures
+  - Page Visibility API: `document.addEventListener('visibilitychange', ...)` + `document.visibilityState !== 'hidden'`; add/remove listener in the polling `useEffect` so it's cleaned up with the component
+  - Exponential backoff formula: `min(base * 2^errorCount, maxMs)` + jitter `±25%`; cap `errorCount` at 10 to avoid overflow
+  - `joinDataRef.current = joinData` must be set BEFORE calling `scheduleRef.current?.()` in the effect, so the first timeout can read the session data
+  - Setting `joinDataRef.current = null` in cleanup stops the recursive poll chain when component unmounts
+
+---
+
 ## 2026-02-22 - US-013
 - Created migration `2026_02_22_800000_add_unique_spectator_per_question_to_votes_table.php`: added UNIQUE constraint on `(performance_question_id, spectator_token)` in `votes` table to enforce 1-vote-per-spectator-per-question at DB level
 - Added `vote()` method to `PerformanceController`: public endpoint; validates `spectator_session_id`, `question_option_id`, `client_vote_id`; checks `client_vote_id` idempotency first (returns existing if found); finds active `PerformanceQuestion` for the option's question in this performance; rejects if question not active or already closed; checks if spectator already voted on this question (returns existing); creates new Vote; returns `{ vote_id, question_option_id, message }` with 201 or 200
@@ -170,6 +191,7 @@
 - SpectatorSession: stored in `spectator_sessions` table with `performance_id` FK and `spectator_session_id` UUID (unique); frontend stores per-token in localStorage under key `spectator_session_{token}`
 - Spectator vote lookup: `Vote::where('performance_question_id', $pq->id)->where('spectator_token', $spectatorSessionId)` — `spectator_token` stores the `spectator_session_id` passed as query param to public endpoints
 - Vote deduplication: two-layer — `client_vote_id` (globally unique, for retry idempotency) + UNIQUE constraint on `(performance_question_id, spectator_token)` (for 1-vote-per-spectator-per-question)
+- Adaptive polling: use `setTimeout` + recursive scheduling (not `setInterval`) when poll intervals must vary; keep `joinDataRef` + `scheduleRef` to avoid stale closures; use `visibilitychange` event for background detection
 - `next/font/google` requires internet at build time — in offline CI, use `next/font/local` with woff2 files from `public/fonts/` (copy from `node_modules/next/dist/esm/next-devtools/server/font/`)
 
 ---

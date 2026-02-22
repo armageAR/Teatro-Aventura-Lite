@@ -187,8 +187,7 @@
         "La restricción UNIQUE (performance_id, question_id, spectator_session_id) se aplica a nivel de base de datos"
       ],
       "priority": 13,
-      "passes": true,
-      "inProgress": true
+      "passes": true
     },
     {
       "id": "US-014",
@@ -204,7 +203,7 @@
         "Existe un endpoint GET /api/performances/:id/current para el estado del espectador"
       ],
       "priority": 14,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-015",
