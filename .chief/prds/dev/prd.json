@@ -142,7 +142,7 @@
         "Esta acción está disponible después de cerrar la votación de la pregunta"
       ],
       "priority": 10,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-011",

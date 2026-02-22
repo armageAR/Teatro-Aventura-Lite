@@ -1,3 +1,24 @@
+## 2026-02-22 - US-010
+- Created migration `2026_02_22_600000_add_winning_answer_option_id_to_performance_questions.php`: added `winning_answer_option_id` nullable FK to `question_options` in `performance_questions`
+- Updated `PerformanceQuestion` model: added `winning_answer_option_id` to `$fillable`
+- Added `setWinner()` method to `PerformanceController`: validates question is closed, validates option belongs to question, sets `winning_answer_option_id`; also handles idempotent re-assignment
+- Updated `buildQuestionStatus()` helper to include `winning_answer_option_id` in response
+- Updated `live()` method to include `winning_answer_option_id` per question
+- Updated `questions()` method to include `winning_answer_option_id` per question
+- Added route `PATCH /api/performances/{performance}/questions/{question}/winner` in `api.php`
+- Added 6 new tests in `PerformanceManagementTest` (89 total pass): set winner on closed question, winner can be any option, cannot set winner on active/pending question, option must belong to question, can change winner, guest auth check
+- Updated `funciones/[performanceId]/page.tsx`: added `winning_answer_option_id` to `PerformanceQuestionApi` and `LiveQuestionApi` types; added `winnerActionLoading` state; added `handleSetWinner` callback; for closed questions in results view, shows winner selection buttons; highlights winning option with badge and gold bar fill
+- Updated `page.module.scss`: added `.resultItemWinner`, `.winnerBadge`, `.resultBarFillWinner`, `.winnerActions`, `.winnerActionsLabel`, `.winnerActionsRow`, `.btnWinner`, `.btnWinnerActive` styles
+- All 89 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `2026_02_22_600000_add_winning_answer_option_id_to_performance_questions.php`, `PerformanceQuestion.php`, `PerformanceController.php`, `api.php`, `PerformanceManagementTest.php`, `funciones/[performanceId]/page.tsx`, `funciones/[performanceId]/page.module.scss`
+- **Learnings for future iterations:**
+  - `winning_answer_option_id` lives on `performance_questions` (the pivot), not on `performances` — winner is per question per performance
+  - Winner validation: (1) question must have `closed_at` set, (2) option must exist in `question_options`, (3) option must belong to this specific question (check via `$question->options->pluck('id')`)
+  - Winner can be changed after setting (idempotent update pattern — just `$pq->update(...)` without checking if already set)
+  - Frontend winner UX: show selection buttons only when `liveQ.performance_status === "closed"`; use `winnerActionLoading: string | null` with key `"${questionId}-${optionId}"` for per-button loading state
+  - `resultBarFillWinner` CSS class overrides the blue bar fill with gold (#ffc107) for the winning option
+---
+
 ## 2026-02-22 - US-009
 - Created migration `2026_02_22_500000_create_votes_table.php`: `votes` table with `performance_question_id` (FK), `question_option_id` (FK), `spectator_token` (nullable), `client_vote_id` (nullable, unique), timestamps
 - Created `Vote` model with `$fillable` and `performanceQuestion()` / `questionOption()` BelongsTo relationships
