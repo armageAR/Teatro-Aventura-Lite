@@ -14,6 +14,22 @@
   - The `/qr` route must be added explicitly (not covered by `apiResource`) — add it separately in the keycloak group
 ---
 
+## 2026-02-22 - US-007
+- Added `start()` and `close()` methods to `PerformanceController`: state transitions `draft→live` (sets `started_at`) and `live→closed` (sets `ended_at`); idempotent for already-transitioned states; `abort(422)` for invalid transitions
+- Added routes `PATCH /api/performances/{performance}/start` and `PATCH /api/performances/{performance}/close` inside keycloak middleware group in `api.php`
+- Added 7 new tests in `PerformanceManagementTest`: start draft→live, idempotent start on live, cannot start closed, close live→closed, idempotent close on closed, cannot close draft, guests blocked from start/close
+- Updated `/funciones/[performanceId]/page.tsx`: added `actionLoading`/`actionError` states, `handleStart` and `handleClose` callbacks, and an Actions section with conditional buttons (Start for draft, Close for live, message for closed)
+- Updated `page.module.scss`: added `.actionsSection`, `.actionsHeading`, `.actionsRow`, `.btnStart`, `.btnClose`, `.statusMessage`, `.actionError` styles
+- All 67 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `PerformanceController.php`, `api.php`, `PerformanceManagementTest.php`, `funciones/[performanceId]/page.tsx`, `funciones/[performanceId]/page.module.scss`
+- **Learnings for future iterations:**
+  - State transitions use `abort(422, 'message')` for invalid transitions (consistent with other 422 usages)
+  - Idempotency pattern: check if already in target state first, return current data without touching DB
+  - Frontend action buttons: use separate `actionLoading`/`actionError` states so page loading and action loading don't interfere
+  - After a PATCH state transition, update state directly from response data instead of re-fetching
+
+---
+
 ## Codebase Patterns
 - Performance model: has `status` (default 'draft') and `join_token` (UUID, unique) columns auto-set in `booted()` hook
 - Performance detail: GET /api/performances/:id now loads the `play` relationship (show() uses `$performance->load('play')`)

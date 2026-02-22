@@ -100,7 +100,7 @@
         "El cambio de estado se refleja correctamente en la vista del Productor"
       ],
       "priority": 7,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-008",
