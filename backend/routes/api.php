@@ -56,6 +56,7 @@ Route::get('/health', function () {
 // === RUTAS PÚBLICAS (sin autenticación) ===
 Route::post('performances/join', [PerformanceController::class, 'join'])->name('performances.join');
 Route::get('performances/{performance}/current', [PerformanceController::class, 'current'])->name('performances.current');
+Route::post('performances/{performance}/vote', [PerformanceController::class, 'vote'])->name('performances.vote');
 
 // === AUTH PROTEGIDO (Keycloak) ===
 Route::middleware('keycloak')->group(function () {

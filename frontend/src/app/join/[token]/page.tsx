@@ -58,6 +58,8 @@ export default function JoinPage() {
   const [currentState, setCurrentState] = useState<CurrentStateApi | null>(
     null
   );
+  const [voteLoading, setVoteLoading] = useState(false);
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   const storageKey = `spectator_session_${token}`;
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -128,6 +130,46 @@ export default function JoinPage() {
       setLoading(false);
     }
   }, [token, storageKey, fetchCurrent]);
+
+  const handleVote = useCallback(
+    async (optionId: number) => {
+      if (!joinData || voteLoading) return;
+
+      setVoteLoading(true);
+      setVoteError(null);
+
+      const clientVoteId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+      try {
+        await api.post(`/api/performances/${joinData.performance_id}/vote`, {
+          spectator_session_id: joinData.spectator_session_id,
+          question_option_id: optionId,
+          client_vote_id: clientVoteId,
+        });
+
+        // Immediately refresh state to show confirmation
+        await fetchCurrent(
+          joinData.performance_id,
+          joinData.spectator_session_id
+        );
+      } catch (err) {
+        if (isAxiosError(err)) {
+          const msg =
+            (err.response?.data as { message?: string })?.message ??
+            "Error al enviar tu voto. Intentá de nuevo.";
+          setVoteError(msg);
+        } else {
+          setVoteError("Error inesperado. Intentá de nuevo.");
+        }
+      } finally {
+        setVoteLoading(false);
+      }
+    },
+    [joinData, voteLoading, fetchCurrent]
+  );
 
   useEffect(() => {
     if (token) {
@@ -201,7 +243,9 @@ export default function JoinPage() {
           )}
 
           {status === "closed" && (
-            <p className={styles.closedText}>La función ha finalizado. ¡Gracias por participar!</p>
+            <p className={styles.closedText}>
+              La función ha finalizado. ¡Gracias por participar!
+            </p>
           )}
 
           {status === "live" && !activeQuestion && (
@@ -230,13 +274,22 @@ export default function JoinPage() {
                   <p className={styles.questionText}>
                     {activeQuestion.question}
                   </p>
+                  {voteError && (
+                    <p className={styles.voteError}>{voteError}</p>
+                  )}
                   <ul className={styles.optionsList}>
                     {activeQuestion.options
                       .slice()
                       .sort((a, b) => a.order - b.order)
                       .map((option) => (
                         <li key={option.id} className={styles.optionItem}>
-                          {option.text}
+                          <button
+                            className={styles.optionButton}
+                            onClick={() => handleVote(option.id)}
+                            disabled={voteLoading}
+                          >
+                            {option.text}
+                          </button>
                         </li>
                       ))}
                   </ul>

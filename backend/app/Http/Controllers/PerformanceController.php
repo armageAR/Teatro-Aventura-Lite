@@ -358,6 +358,67 @@ class PerformanceController extends Controller
         return response()->json($this->buildQuestionStatus($pq->fresh(), $question));
     }
 
+    public function vote(Performance $performance, Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'spectator_session_id' => ['required', 'string'],
+            'question_option_id'   => ['required', 'integer', 'exists:question_options,id'],
+            'client_vote_id'       => ['required', 'string', 'max:64'],
+        ]);
+
+        // Idempotency: if this client_vote_id was already used, return the existing vote
+        $existing = Vote::where('client_vote_id', $data['client_vote_id'])->first();
+        if ($existing) {
+            return response()->json([
+                'vote_id'            => $existing->id,
+                'question_option_id' => $existing->question_option_id,
+                'message'            => 'Voto ya registrado.',
+            ]);
+        }
+
+        // Find the option and derive the question
+        $option = \App\Models\QuestionOption::findOrFail($data['question_option_id']);
+
+        // Find the performance_question for this question in this performance
+        $pq = PerformanceQuestion::where('performance_id', $performance->id)
+            ->where('question_id', $option->question_id)
+            ->first();
+
+        if (!$pq || !$pq->sent_at) {
+            abort(422, 'La pregunta no está activa en esta función.');
+        }
+
+        if ($pq->closed_at) {
+            abort(422, 'La votación ya está cerrada.');
+        }
+
+        // Check if this spectator already voted on this question
+        $existingSpectator = Vote::where('performance_question_id', $pq->id)
+            ->where('spectator_token', $data['spectator_session_id'])
+            ->first();
+
+        if ($existingSpectator) {
+            return response()->json([
+                'vote_id'            => $existingSpectator->id,
+                'question_option_id' => $existingSpectator->question_option_id,
+                'message'            => 'Ya votaste en esta pregunta.',
+            ]);
+        }
+
+        $vote = Vote::create([
+            'performance_question_id' => $pq->id,
+            'question_option_id'      => $data['question_option_id'],
+            'spectator_token'         => $data['spectator_session_id'],
+            'client_vote_id'          => $data['client_vote_id'],
+        ]);
+
+        return response()->json([
+            'vote_id'            => $vote->id,
+            'question_option_id' => $vote->question_option_id,
+            'message'            => 'Voto registrado correctamente.',
+        ], 201);
+    }
+
     public function current(Performance $performance, Request $request): JsonResponse
     {
         $performance->load('play');
