@@ -1,0 +1,73 @@
+.page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.welcomeBox {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.5rem;
+}
+
+.playTitle {
+  font-size: 1.25rem;
+  color: #374151;
+  font-weight: 500;
+  margin: 0 0 1rem;
+}
+
+.statusBadge {
+  display: inline-block;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 0.25rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.sessionInfo {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.loadingText {
+  text-align: center;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.errorBox {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 1.25rem;
+  color: #b91c1c;
+  text-align: center;
+  font-size: 0.9375rem;
+
+  p {
+    margin: 0;
+  }
+}

@@ -6,6 +6,7 @@ use App\Models\Performance;
 use App\Models\PerformanceQuestion;
 use App\Models\Play;
 use App\Models\Question;
+use App\Models\SpectatorSession;
 use App\Models\Vote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,6 +78,36 @@ class PerformanceController extends Controller
         $performance->delete();
 
         return response()->noContent();
+    }
+
+    public function join(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'string'],
+        ]);
+
+        try {
+            $performance = Performance::where('join_token', $data['token'])->first();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $performance = null;
+        }
+
+        if (!$performance) {
+            return response()->json(['message' => 'Función no encontrada.'], 404);
+        }
+
+        $session = SpectatorSession::create([
+            'performance_id' => $performance->id,
+        ]);
+
+        $performance->load('play');
+
+        return response()->json([
+            'spectator_session_id' => $session->spectator_session_id,
+            'performance_id' => $performance->id,
+            'performance_status' => $performance->status,
+            'play_title' => $performance->play?->title,
+        ], 201);
     }
 
     public function restore(int $performance): JsonResponse

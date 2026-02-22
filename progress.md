@@ -1,3 +1,22 @@
+## 2026-02-22 - US-011
+- Created migration `2026_02_22_700000_create_spectator_sessions_table.php`: `spectator_sessions` table with `performance_id` (FK), `spectator_session_id` (UUID, unique), timestamps
+- Created `SpectatorSession` model: `$fillable` = ['performance_id', 'spectator_session_id']; auto-generates UUID in `booted()` creating hook; `performance()` BelongsTo relationship
+- Added `join()` method to `PerformanceController`: public endpoint (no keycloak), validates `token`, queries `Performance` by `join_token` (with try/catch for PostgreSQL UUID type error on invalid input), creates new `SpectatorSession`, returns `{ spectator_session_id, performance_id, performance_status, play_title }`
+- Added public route `POST /api/performances/join` OUTSIDE keycloak middleware group in `api.php`
+- Created `SpectatorJoinTest.php` with 8 tests: join live/draft/closed performance, 404 for invalid token, 422 for missing token, no auth required, multiple joins create distinct sessions, session_id is UUID (97 total pass)
+- Created `frontend/src/app/join/[token]/page.tsx`: public page (no useApi/Keycloak needed), checks localStorage for existing session, POSTs to /api/performances/join if not found, saves spectator_session_id to localStorage keyed by token, shows welcome message with play title and performance status
+- Created `frontend/src/app/join/[token]/page.module.scss`: styles for welcome box, title, statusBadge, loadingText, errorBox
+- All 97 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `2026_02_22_700000_create_spectator_sessions_table.php`, `SpectatorSession.php`, `PerformanceController.php`, `api.php`, `SpectatorJoinTest.php`, `join/[token]/page.tsx`, `join/[token]/page.module.scss`
+- **Learnings for future iterations:**
+  - PostgreSQL `uuid` column type throws `QueryException` (not null) when comparing to a non-UUID string — wrap `Performance::where('join_token', ...)` in try/catch `QueryException` and treat as null
+  - Public (no-auth) routes must be placed OUTSIDE the `Route::middleware('keycloak')` group in `api.php` — place them in a "RUTAS PÚBLICAS" block before the keycloak group
+  - The join page uses `api` from `@/lib/api` directly (not `useApi()` which adds Keycloak Bearer token) — `useApi` is only for authenticated producer endpoints
+  - `localStorage` key pattern for spectator sessions: `spectator_session_{token}` — allows multiple performances in same browser
+  - SpectatorSession UUID is auto-generated in `booted()` hook (same pattern as `join_token` in Performance model)
+  - Each POST /api/performances/join ALWAYS creates a new session — idempotency is handled on the frontend via localStorage (if session exists in localStorage, skip the POST)
+---
+
 ## 2026-02-22 - US-010
 - Created migration `2026_02_22_600000_add_winning_answer_option_id_to_performance_questions.php`: added `winning_answer_option_id` nullable FK to `question_options` in `performance_questions`
 - Updated `PerformanceQuestion` model: added `winning_answer_option_id` to `$fillable`
@@ -110,6 +129,9 @@
 - Play model: has `title` (required), `description` (nullable), `cover_image_url` (nullable) columns
 - Question/Option routes: nested shallow routing — POST /api/plays/:id/questions, PUT/DELETE /api/questions/:id, POST /api/questions/:id/options, PUT/DELETE /api/options/:id
 - Inline form options: when a modal needs to create/edit parent+children together, fetch children before opening edit modal, submit sequentially to avoid unique constraint conflicts (delete first, then update, then create)
+- Public routes: place outside keycloak middleware group in `api.php`; use `api` from `@/lib/api` directly (not `useApi()`) in frontend to avoid injecting auth token
+- PostgreSQL UUID column: querying with non-UUID string throws `QueryException` — always try/catch when searching by UUID with user-supplied input
+- SpectatorSession: stored in `spectator_sessions` table with `performance_id` FK and `spectator_session_id` UUID (unique); frontend stores per-token in localStorage under key `spectator_session_{token}`
 
 ---
 

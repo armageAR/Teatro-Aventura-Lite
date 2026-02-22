@@ -157,7 +157,7 @@
         "Existe un endpoint POST /api/performances/join que acepta el token y devuelve el spectator_session_id"
       ],
       "priority": 11,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-012",
