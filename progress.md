@@ -1,3 +1,20 @@
+## 2026-02-22 - US-012
+- Added `current()` method to `PerformanceController`: public endpoint (no keycloak); finds the active `PerformanceQuestion` (sent but not closed); checks if the given `spectator_session_id` has a `Vote` (`spectator_token` = sessionId) for the active question; returns `{ performance_id, status, play_title, active_question: { id, question, options[], has_voted, voted_option_id } | null }`
+- Added public route `GET /api/performances/{performance}/current` in `api.php` (outside keycloak group)
+- Created `SpectatorCurrentTest.php` with 8 tests: draft/live without question, active question with options, has_voted when spectator voted, has_voted false without session, no active question when question closed, no auth required, 404 for nonexistent performance (105 total pass)
+- Updated `frontend/src/app/join/[token]/page.tsx`: replaced static welcome with polling state view; added `CurrentStateApi` / `CurrentOptionApi` / `CurrentActiveQuestionApi` types; `currentState` state; `fetchCurrent` callback; `useEffect` for polling every 3s via `setInterval` + `useRef`; renders play title, status badge, correct message per state (draft=waiting, live=waiting/question, closed=ended); if active question, shows question text + options list; if `has_voted=true` shows voted confirmation with chosen option text
+- Updated `frontend/src/app/join/[token]/page.module.scss`: added `.waitingText`, `.closedText`, `.questionBox`, `.questionText`, `.optionsList`, `.optionItem`, `.votedConfirmation`, `.votedIcon`, `.votedText`, `.votedSubText` styles; removed `.sessionInfo`
+- All 105 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `PerformanceController.php`, `api.php`, `SpectatorCurrentTest.php`, `join/[token]/page.tsx`, `join/[token]/page.module.scss`
+- **Learnings for future iterations:**
+  - `GET /api/performances/{id}/current` is a PUBLIC route — add it to the public routes block in `api.php` BEFORE the keycloak group
+  - `spectator_token` in `votes` table stores the `spectator_session_id` — this is how to check if a spectator voted on a question
+  - Polling in a page that has both "join" phase and "ongoing" phase: join once, store session in state, then start `setInterval` in a separate `useEffect` that watches `joinData`
+  - Avoid calling `fetchCurrent` from inside the join `useCallback` and also from interval — the join flow calls it once immediately, the interval handles subsequent updates
+  - `pollTimerRef.current` must be cleared in the cleanup function of the `useEffect` to avoid duplicate timers on re-renders
+
+---
+
 ## 2026-02-22 - US-011
 - Created migration `2026_02_22_700000_create_spectator_sessions_table.php`: `spectator_sessions` table with `performance_id` (FK), `spectator_session_id` (UUID, unique), timestamps
 - Created `SpectatorSession` model: `$fillable` = ['performance_id', 'spectator_session_id']; auto-generates UUID in `booted()` creating hook; `performance()` BelongsTo relationship
@@ -132,6 +149,7 @@
 - Public routes: place outside keycloak middleware group in `api.php`; use `api` from `@/lib/api` directly (not `useApi()`) in frontend to avoid injecting auth token
 - PostgreSQL UUID column: querying with non-UUID string throws `QueryException` — always try/catch when searching by UUID with user-supplied input
 - SpectatorSession: stored in `spectator_sessions` table with `performance_id` FK and `spectator_session_id` UUID (unique); frontend stores per-token in localStorage under key `spectator_session_{token}`
+- Spectator vote lookup: `Vote::where('performance_question_id', $pq->id)->where('spectator_token', $spectatorSessionId)` — `spectator_token` stores the `spectator_session_id` passed as query param to public endpoints
 
 ---
 

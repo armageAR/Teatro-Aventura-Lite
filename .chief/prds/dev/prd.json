@@ -171,7 +171,7 @@
         "La pantalla de landing muestra el estado correcto en tiempo real mediante polling"
       ],
       "priority": 12,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-013",
