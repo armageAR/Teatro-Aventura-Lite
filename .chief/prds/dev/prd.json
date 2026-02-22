@@ -129,7 +129,7 @@
         "Existe un endpoint GET /api/performances/:id/live que devuelve conteos y porcentajes"
       ],
       "priority": 9,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-010",

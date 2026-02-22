@@ -1,3 +1,21 @@
+## 2026-02-22 - US-009
+- Created migration `2026_02_22_500000_create_votes_table.php`: `votes` table with `performance_question_id` (FK), `question_option_id` (FK), `spectator_token` (nullable), `client_vote_id` (nullable, unique), timestamps
+- Created `Vote` model with `$fillable` and `performanceQuestion()` / `questionOption()` BelongsTo relationships
+- Added `live()` method to `PerformanceController`: returns `{ performance_id, status, questions[] }` where questions are only sent ones (active/closed); each question includes `total_votes` and `options[]` with `vote_count` and `vote_percentage`
+- Added route `GET /api/performances/{performance}/live` inside keycloak middleware group in `api.php`
+- Added 5 new tests in `PerformanceManagementTest` (82 total pass): get live results with no votes, correct counts/percentages, only sent questions included, closed questions included, guest auth check
+- Updated `funciones/[performanceId]/page.tsx`: added `LiveResultApi` / `LiveQuestionApi` / `LiveOptionApi` types, `liveResults` state, `fetchLiveResults` callback, polling via `setInterval` (3s) in a `useEffect` that reacts to `performance.status` and `questions`; when `liveQ` data exists for a question, shows results bar chart instead of plain option list; triggers immediate `fetchLiveResults` after send/close question actions
+- Updated `page.module.scss`: added `.resultsList`, `.resultItem`, `.resultHeader`, `.resultText`, `.resultCount`, `.resultPct`, `.resultBar`, `.resultBarFill`, `.resultTotal` styles
+- All 82 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `2026_02_22_500000_create_votes_table.php`, `Vote.php`, `PerformanceController.php`, `api.php`, `PerformanceManagementTest.php`, `funciones/[performanceId]/page.tsx`, `funciones/[performanceId]/page.module.scss`
+- **Learnings for future iterations:**
+  - Vote aggregation: use `DB::raw('count(*) as cnt')` + `groupBy` + `get()->groupBy('performance_question_id')` to batch-fetch vote counts for all performance questions in one query
+  - PHP JSON-encodes `0.0` as integer `0`; test assertions for zero percentages should use `0` not `0.0`
+  - Polling pattern: use `useRef` for the timer handle + `useEffect` that watches `performance.status` and `questions` to start/stop the interval; return cleanup function clears the interval
+  - `liveResultsMap = new Map(questions.map(q => [q.id, q]))` for O(1) lookup when merging results into question cards
+  - `pollTimerRef.current` must be cleared before setting new interval to avoid duplicate timers when dependencies change
+---
+
 ## 2026-02-22 - US-008
 - Created migration `2026_02_22_400000_create_performance_questions_table.php`: `performance_questions` table with `performance_id`, `question_id`, `sent_at` (nullable), `closed_at` (nullable), unique on `(performance_id, question_id)`
 - Created `PerformanceQuestion` model with fillable `performance_id`, `question_id`, `sent_at`, `closed_at` and `datetime` casts
