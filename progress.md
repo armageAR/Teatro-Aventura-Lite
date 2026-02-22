@@ -1,4 +1,7 @@
 ## Codebase Patterns
+- Performance model: has `status` (default 'draft') and `join_token` (UUID, unique) columns auto-set in `booted()` hook
+- Performance detail: GET /api/performances/:id now loads the `play` relationship (show() uses `$performance->load('play')`)
+- Frontend navigation after creation: use `useRouter().push('/funciones/{id}')` with typed API response `post<{ id: number }>`
 - Backend: Laravel 10 (PHP 8.2+) with PostgreSQL, `keycloak` middleware alias for auth
 - Frontend: Next.js 15 + React 19 + TypeScript + Tailwind CSS 4
 - Auth: Keycloak singleton in `KeycloakProvider.tsx`; `useApi()` hook auto-injects Bearer token
@@ -15,6 +18,24 @@
 - Play model: has `title` (required), `description` (nullable), `cover_image_url` (nullable) columns
 - Question/Option routes: nested shallow routing — POST /api/plays/:id/questions, PUT/DELETE /api/questions/:id, POST /api/questions/:id/options, PUT/DELETE /api/options/:id
 - Inline form options: when a modal needs to create/edit parent+children together, fetch children before opening edit modal, submit sequentially to avoid unique constraint conflicts (delete first, then update, then create)
+
+---
+
+## 2026-02-22 - US-005
+- Added `status` (default 'draft') and `join_token` (UUID, unique) columns to `performances` table via new migration
+- Updated `Performance` model: added `status` and `join_token` to `$fillable`; auto-generates both in `booted()` creating hook
+- Updated `PerformanceFactory`: added `status = 'draft'` and `join_token = Str::uuid()` to definition
+- Updated `PerformanceController::show()`: loads `play` relationship for detail view
+- Updated `PerformanceManagementTest`: added assertion for `status = 'draft'` and `join_token` presence in create/show tests; added `test_performance_is_created_with_draft_status_and_unique_join_token`
+- Created `/funciones/[performanceId]/page.tsx` and `page.module.scss`: detail page showing play title, status, scheduled_at, location, comment, join_token, uid with back link
+- Updated `PerformancesTable`: added "Ver detalle" link column; imported `next/link`
+- Updated `obras/page.tsx`: after creating a performance, use `useRouter().push('/funciones/{id}')` to redirect to detail page; removed unused `performanceMessage` state
+- All 58 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `2026_02_22_300000_add_status_and_join_token_to_performances_table.php`, `Performance.php`, `PerformanceFactory.php`, `PerformanceController.php`, `PerformanceManagementTest.php`, `funciones/[performanceId]/page.tsx`, `funciones/[performanceId]/page.module.scss`, `PerformancesTable.tsx`, `PerformancesTable.module.scss`, `obras/page.tsx`
+- **Learnings for future iterations:**
+  - Performance `status` and `join_token` are always auto-generated in the model's `booted()` hook — never accept them from user input in controller validation
+  - `PerformanceController::show()` now loads `play` relationship — detail views for Performance will have play data available
+  - When redirecting after form submission in Next.js, use `useRouter().push()` with typed `api.post<{ id: number }>()` response to get the new record's ID
 
 ---
 
