@@ -27,6 +27,22 @@ type PerformanceDetailApi = {
   } | null;
 };
 
+type PerformanceQuestionOptionApi = {
+  id: number;
+  text: string;
+  order: number;
+};
+
+type PerformanceQuestionApi = {
+  id: number;
+  question: string;
+  order: number;
+  options: PerformanceQuestionOptionApi[];
+  performance_status: "pending" | "active" | "closed";
+  sent_at?: string | null;
+  closed_at?: string | null;
+};
+
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "long",
   timeStyle: "short",
@@ -45,6 +61,12 @@ const STATUS_LABELS: Record<string, string> = {
   canceled: "Cancelada",
 };
 
+const QUESTION_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  active: "En votación",
+  closed: "Cerrada",
+};
+
 export default function PerformanceDetailPage() {
   const params = useParams();
   const api = useApi();
@@ -56,6 +78,11 @@ export default function PerformanceDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [questions, setQuestions] = useState<PerformanceQuestionApi[]>([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [questionActionLoading, setQuestionActionLoading] = useState<number | null>(null);
+  const [questionActionError, setQuestionActionError] = useState<string | null>(null);
 
   const fetchPerformance = useCallback(async () => {
     setLoading(true);
@@ -75,6 +102,20 @@ export default function PerformanceDetailPage() {
       }
     } finally {
       setLoading(false);
+    }
+  }, [api, performanceId]);
+
+  const fetchQuestions = useCallback(async () => {
+    setQuestionsLoading(true);
+    try {
+      const response = await api.get<PerformanceQuestionApi[]>(
+        `/api/performances/${performanceId}/questions`,
+      );
+      setQuestions(response.data);
+    } catch {
+      // Non-critical: questions section degrades gracefully
+    } finally {
+      setQuestionsLoading(false);
     }
   }, [api, performanceId]);
 
@@ -114,9 +155,56 @@ export default function PerformanceDetailPage() {
     }
   }, [api, performanceId]);
 
+  const handleSendQuestion = useCallback(
+    async (questionId: number) => {
+      setQuestionActionLoading(questionId);
+      setQuestionActionError(null);
+      try {
+        const response = await api.patch<PerformanceQuestionApi>(
+          `/api/performances/${performanceId}/questions/${questionId}/send`,
+        );
+        setQuestions((prev) => prev.map((q) => (q.id === questionId ? response.data : q)));
+      } catch (err) {
+        if (isAxiosError(err)) {
+          const message = err.response?.data?.message as string | undefined;
+          setQuestionActionError(message ?? "No se pudo enviar la pregunta.");
+        } else {
+          setQuestionActionError("No se pudo enviar la pregunta.");
+        }
+      } finally {
+        setQuestionActionLoading(null);
+      }
+    },
+    [api, performanceId],
+  );
+
+  const handleCloseQuestion = useCallback(
+    async (questionId: number) => {
+      setQuestionActionLoading(questionId);
+      setQuestionActionError(null);
+      try {
+        const response = await api.patch<PerformanceQuestionApi>(
+          `/api/performances/${performanceId}/questions/${questionId}/close`,
+        );
+        setQuestions((prev) => prev.map((q) => (q.id === questionId ? response.data : q)));
+      } catch (err) {
+        if (isAxiosError(err)) {
+          const message = err.response?.data?.message as string | undefined;
+          setQuestionActionError(message ?? "No se pudo cerrar la pregunta.");
+        } else {
+          setQuestionActionError("No se pudo cerrar la pregunta.");
+        }
+      } finally {
+        setQuestionActionLoading(null);
+      }
+    },
+    [api, performanceId],
+  );
+
   useEffect(() => {
     fetchPerformance();
-  }, [fetchPerformance]);
+    fetchQuestions();
+  }, [fetchPerformance, fetchQuestions]);
 
   if (loading) {
     return (
@@ -145,6 +233,8 @@ export default function PerformanceDetailPage() {
     typeof window !== "undefined"
       ? `${window.location.origin}/join/${performance.join_token}`
       : `/join/${performance.join_token}`;
+
+  const hasActiveQuestion = questions.some((q) => q.performance_status === "active");
 
   return (
     <div className={styles.page}>
@@ -215,6 +305,62 @@ export default function PerformanceDetailPage() {
               <p className={styles.statusMessage}>La función ha sido cerrada.</p>
             )}
           </div>
+        </section>
+
+        <section className={styles.questionsSection}>
+          <h2 className={styles.questionsHeading}>Preguntas</h2>
+          {questionActionError && <p className={styles.actionError}>{questionActionError}</p>}
+          {questionsLoading && <p className={styles.loading}>Cargando preguntas...</p>}
+          {!questionsLoading && questions.length === 0 && (
+            <p className={styles.statusMessage}>No hay preguntas para esta obra.</p>
+          )}
+          {questions.map((q) => (
+            <div
+              key={q.id}
+              className={`${styles.questionItem} ${styles[`qItem_${q.performance_status}`] ?? ""}`}
+            >
+              <div className={styles.questionHeader}>
+                <span className={styles.questionOrder}>{q.order}.</span>
+                <span className={styles.questionText}>{q.question}</span>
+                <span
+                  className={`${styles.qStatusBadge} ${styles[`qBadge_${q.performance_status}`] ?? ""}`}
+                >
+                  {QUESTION_STATUS_LABELS[q.performance_status] ?? q.performance_status}
+                </span>
+              </div>
+              {q.options.length > 0 && (
+                <ul className={styles.optionsList}>
+                  {q.options.map((opt) => (
+                    <li key={opt.id} className={styles.optionItem}>
+                      {opt.text}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {performance.status === "live" && (
+                <div className={styles.questionActions}>
+                  {q.performance_status === "pending" && !hasActiveQuestion && (
+                    <button
+                      className={styles.btnSend}
+                      onClick={() => handleSendQuestion(q.id)}
+                      disabled={questionActionLoading === q.id}
+                    >
+                      {questionActionLoading === q.id ? "Enviando..." : "Enviar al público"}
+                    </button>
+                  )}
+                  {q.performance_status === "active" && (
+                    <button
+                      className={styles.btnCloseQuestion}
+                      onClick={() => handleCloseQuestion(q.id)}
+                      disabled={questionActionLoading === q.id}
+                    >
+                      {questionActionLoading === q.id ? "Cerrando..." : "Cerrar votación"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </section>
 
         <section className={styles.qrSection}>

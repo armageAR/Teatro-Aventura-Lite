@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Performance;
+use App\Models\PerformanceQuestion;
 use App\Models\Play;
+use App\Models\Question;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -361,5 +363,205 @@ class PerformanceManagementTest extends TestCase
 
         $this->patchJson("/api/performances/{$performance->id}/start")->assertUnauthorized();
         $this->patchJson("/api/performances/{$performance->id}/close")->assertUnauthorized();
+    }
+
+    public function test_authenticated_users_can_list_questions_for_a_performance(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $q1 = Question::factory()->for($play)->create(['order' => 1]);
+        $q2 = Question::factory()->for($play)->create(['order' => 2]);
+
+        // Send q1
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $q1->id,
+            'sent_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $response = $this->getJson("/api/performances/{$performance->id}/questions");
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(2)
+            ->assertJsonFragment(['id' => $q1->id, 'performance_status' => 'active'])
+            ->assertJsonFragment(['id' => $q2->id, 'performance_status' => 'pending']);
+    }
+
+    public function test_producer_can_send_a_question_during_live_performance(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/send");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['id' => $question->id, 'performance_status' => 'active']);
+
+        $this->assertDatabaseHas('performance_questions', [
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+        ]);
+
+        $pq = PerformanceQuestion::where([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+        ])->first();
+        $this->assertNotNull($pq->sent_at);
+        $this->assertNull($pq->closed_at);
+    }
+
+    public function test_sending_an_active_question_is_idempotent(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/send");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['performance_status' => 'active']);
+
+        // Still only one record
+        $this->assertDatabaseCount('performance_questions', 1);
+    }
+
+    public function test_cannot_send_question_when_performance_is_not_live(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'draft']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/send");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_cannot_send_question_that_doesnt_belong_to_play(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $otherPlay = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($otherPlay)->create(['order' => 1]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/send");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_cannot_send_second_question_while_one_is_active(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $q1 = Question::factory()->for($play)->create(['order' => 1]);
+        $q2 = Question::factory()->for($play)->create(['order' => 2]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $q1->id,
+            'sent_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$q2->id}/send");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_producer_can_close_an_active_question(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/close");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['performance_status' => 'closed']);
+
+        $pq = PerformanceQuestion::where([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+        ])->first();
+        $this->assertNotNull($pq->closed_at);
+    }
+
+    public function test_closing_a_closed_question_is_idempotent(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        PerformanceQuestion::create([
+            'performance_id' => $performance->id,
+            'question_id' => $question->id,
+            'sent_at' => now(),
+            'closed_at' => now(),
+        ]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/close");
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment(['performance_status' => 'closed']);
+    }
+
+    public function test_cannot_close_question_that_hasnt_been_sent(): void
+    {
+        $this->withKeycloakToken();
+
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        $response = $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/close");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_guests_cannot_access_question_send_and_close_endpoints(): void
+    {
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create();
+        $question = Question::factory()->for($play)->create(['order' => 1]);
+
+        $this->getJson("/api/performances/{$performance->id}/questions")->assertUnauthorized();
+        $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/send")->assertUnauthorized();
+        $this->patchJson("/api/performances/{$performance->id}/questions/{$question->id}/close")->assertUnauthorized();
     }
 }

@@ -183,6 +183,144 @@
   font-size: 0.9rem;
 }
 
+.questionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: rgba(245, 245, 245, 0.04);
+  border: 1px solid rgba(245, 245, 245, 0.1);
+  border-radius: 8px;
+}
+
+.questionsHeading {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.questionItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(245, 245, 245, 0.08);
+  border-radius: 6px;
+  background: rgba(245, 245, 245, 0.02);
+}
+
+.qItem_active {
+  border-color: rgba(76, 175, 80, 0.4);
+  background: rgba(76, 175, 80, 0.06);
+}
+
+.qItem_closed {
+  opacity: 0.6;
+}
+
+.questionHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.questionOrder {
+  font-weight: 600;
+  color: rgba(245, 245, 245, 0.5);
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.questionText {
+  flex: 1;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.qStatusBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(245, 245, 245, 0.1);
+  color: rgba(245, 245, 245, 0.6);
+  flex-shrink: 0;
+}
+
+.qBadge_active {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.qBadge_closed {
+  background: rgba(245, 245, 245, 0.06);
+  color: rgba(245, 245, 245, 0.4);
+}
+
+.optionsList {
+  margin: 0;
+  padding: 0 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.optionItem {
+  font-size: 0.875rem;
+  color: rgba(245, 245, 245, 0.7);
+}
+
+.questionActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.btnSend {
+  padding: 0.45rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #1976d2;
+  color: #fff;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: #1565c0;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btnCloseQuestion {
+  padding: 0.45rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #e53935;
+  color: #fff;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: #c62828;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 .qrSection {
   display: flex;
   flex-direction: column;
