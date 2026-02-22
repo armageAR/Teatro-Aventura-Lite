@@ -1,3 +1,23 @@
+## 2026-02-22 - US-015
+- Added `isOnline` state (initialized from `navigator.onLine`) to `join/[token]/page.tsx` to track network connectivity
+- Added `isNotFound` state to distinguish 404 errors (permanent) from transient network errors in `join()` handler
+- Added network recovery `useEffect` that:
+  - On `online` event: sets `isOnline(true)`; if active session → resets backoff, cancels pending timer, polls immediately; if no session (join failed while offline) → auto-retries `join()`
+  - On `offline` event: sets `isOnline(false)`, cancels pending poll timer (poll resumes when connection returns)
+- Added `retryButton` to error UI for non-404 errors, allowing manual retry alongside automatic recovery
+- Added fixed `offlineBanner` overlay (shown when `!isOnline`) to inform user of connectivity loss
+- Updated CSS in `page.module.scss`: added `.offlineBanner` (fixed top banner, amber/brown theme) and `.retryButton` styles
+- All 115 backend tests still pass; frontend typecheck + ESLint + build all clean
+- Files changed: `join/[token]/page.tsx`, `join/[token]/page.module.scss`
+- **Learnings for future iterations:**
+  - `window.addEventListener('online'/'offline')` fires when browser connectivity changes; use these in a standalone `useEffect` alongside `visibilitychange` for full reconnection handling
+  - On `online` event: check `joinDataRef.current` (not `joinData` state) to avoid stale closure; if null → call `join()`, if set → call `fetchCurrent()` + `scheduleRef.current?.()`
+  - Distinguish 404 (permanent, no retry) from other errors (transient, show retry button) using a separate `isNotFound` state
+  - The `join()` function is safe to call multiple times: it reads localStorage first (returns existing session if found), so auto-retry on `online` event won't create duplicate sessions
+  - `navigator.onLine` is available at mount time for initial `isOnline` state; SSR safety: use `typeof navigator !== 'undefined'`
+
+---
+
 ## 2026-02-22 - US-014
 - Added `updated_at` field to `current()` response in `PerformanceController.php`: exposes `$performance->updated_at->toISOString()` for client-side state versioning
 - Added `test_current_response_includes_updated_at` to `SpectatorCurrentTest.php`: verifies field is present and matches ISO 8601 format (115 total pass)
@@ -191,7 +211,7 @@
 - SpectatorSession: stored in `spectator_sessions` table with `performance_id` FK and `spectator_session_id` UUID (unique); frontend stores per-token in localStorage under key `spectator_session_{token}`
 - Spectator vote lookup: `Vote::where('performance_question_id', $pq->id)->where('spectator_token', $spectatorSessionId)` — `spectator_token` stores the `spectator_session_id` passed as query param to public endpoints
 - Vote deduplication: two-layer — `client_vote_id` (globally unique, for retry idempotency) + UNIQUE constraint on `(performance_question_id, spectator_token)` (for 1-vote-per-spectator-per-question)
-- Adaptive polling: use `setTimeout` + recursive scheduling (not `setInterval`) when poll intervals must vary; keep `joinDataRef` + `scheduleRef` to avoid stale closures; use `visibilitychange` event for background detection
+- Adaptive polling: use `setTimeout` + recursive scheduling (not `setInterval`) when poll intervals must vary; keep `joinDataRef` + `scheduleRef` to avoid stale closures; use `visibilitychange` event for background detection; use `window.addEventListener('online'/'offline')` for network recovery
 - `next/font/google` requires internet at build time — in offline CI, use `next/font/local` with woff2 files from `public/fonts/` (copy from `node_modules/next/dist/esm/next-devtools/server/font/`)
 
 ---

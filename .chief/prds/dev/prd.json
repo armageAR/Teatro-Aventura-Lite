@@ -217,7 +217,7 @@
         "Si el spectator_session_id se pierde del localStorage, se crea una nueva sesión sin romper la Performance en curso"
       ],
       "priority": 15,
-      "passes": false
+      "passes": true
     }
   ]
 }
