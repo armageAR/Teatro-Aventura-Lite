@@ -241,4 +241,29 @@ class PerformanceManagementTest extends TestCase
         $playResponse = $this->getJson("/api/plays/{$performance->play_id}");
         $playResponse->assertOk()->assertJsonFragment(['performances_count' => 1]);
     }
+
+    public function test_authenticated_users_can_get_qr_data_for_a_performance(): void
+    {
+        $this->withKeycloakToken();
+
+        $performance = Performance::factory()->create();
+
+        $response = $this->getJson("/api/performances/{$performance->id}/qr");
+
+        $response
+            ->assertOk()
+            ->assertJsonStructure(['join_url', 'join_token'])
+            ->assertJsonPath('join_token', $performance->join_token);
+
+        $joinUrl = $response->json('join_url');
+        $this->assertStringContainsString($performance->join_token, $joinUrl);
+        $this->assertStringContainsString('/join/', $joinUrl);
+    }
+
+    public function test_guests_cannot_access_qr_endpoint(): void
+    {
+        $performance = Performance::factory()->create();
+
+        $this->getJson("/api/performances/{$performance->id}/qr")->assertUnauthorized();
+    }
 }

@@ -67,6 +67,7 @@ Route::middleware('keycloak')->group(function () {
     Route::patch('options/{option}/restore', [QuestionOptionController::class, 'restore'])->name('options.restore');
     Route::apiResource('plays.performances', PerformanceController::class)->shallow();
     Route::patch('performances/{performance}/restore', [PerformanceController::class, 'restore'])->name('performances.restore');
+    Route::get('performances/{performance}/qr', [PerformanceController::class, 'qr'])->name('performances.qr');
 });
 
 

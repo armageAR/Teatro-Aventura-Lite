@@ -82,4 +82,15 @@ class PerformanceController extends Controller
 
         return response()->json($performance->fresh());
     }
+
+    public function qr(Performance $performance): JsonResponse
+    {
+        $frontendUrl = rtrim(env('FRONTEND_URL', config('app.url')), '/');
+        $joinUrl = $frontendUrl . '/join/' . $performance->join_token;
+
+        return response()->json([
+            'join_url' => $joinUrl,
+            'join_token' => $performance->join_token,
+        ]);
+    }
 }

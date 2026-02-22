@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { isAxiosError } from "axios";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 
 import { useApi } from "@/hooks/useApi";
 
@@ -102,6 +103,11 @@ export default function PerformanceDetailPage() {
 
   const statusLabel = STATUS_LABELS[performance.status] ?? performance.status;
 
+  const joinUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/join/${performance.join_token}`
+      : `/join/${performance.join_token}`;
+
   return (
     <div className={styles.page}>
       <div className={styles.content}>
@@ -140,15 +146,19 @@ export default function PerformanceDetailPage() {
           )}
 
           <div className={styles.detailRow}>
-            <dt className={styles.detailLabel}>Token de acceso (join_token)</dt>
-            <dd className={`${styles.detailValue} ${styles.token}`}>{performance.join_token}</dd>
-          </div>
-
-          <div className={styles.detailRow}>
             <dt className={styles.detailLabel}>UID interno</dt>
             <dd className={`${styles.detailValue} ${styles.token}`}>{performance.uid}</dd>
           </div>
         </dl>
+
+        <section className={styles.qrSection}>
+          <h2 className={styles.qrHeading}>Código QR de acceso</h2>
+          <div className={styles.qrContainer}>
+            <QRCodeSVG value={joinUrl} size={220} />
+          </div>
+          <p className={styles.qrLabel}>URL de acceso para el público:</p>
+          <p className={`${styles.token} ${styles.qrUrl}`}>{joinUrl}</p>
+        </section>
       </div>
     </div>
   );
