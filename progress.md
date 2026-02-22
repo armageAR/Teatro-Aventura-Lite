@@ -13,7 +13,28 @@
 - Column alteration without doctrine/dbal: use `DB::statement('ALTER TABLE X ALTER COLUMN Y ...')` raw SQL in migrations
 - Frontend API response mapping: use `normalizeWork()` style functions to map snake_case API keys to camelCase TypeScript types
 - Play model: has `title` (required), `description` (nullable), `cover_image_url` (nullable) columns
+- Question/Option routes: nested shallow routing — POST /api/plays/:id/questions, PUT/DELETE /api/questions/:id, POST /api/questions/:id/options, PUT/DELETE /api/options/:id
+- Inline form options: when a modal needs to create/edit parent+children together, fetch children before opening edit modal, submit sequentially to avoid unique constraint conflicts (delete first, then update, then create)
 
+---
+
+## 2026-02-22 - US-004
+- Backend was already fully implemented: QuestionController, QuestionOptionController, models, migrations, tests (18 tests passing)
+- Frontend already had separate modals for questions (QuestionFormModal) and options (OptionFormModal) with a side panel
+- Added inline AnswerOptions to QuestionFormModal: InlineOption type, inline options list state, add/remove per-option controls, options sent in submit payload
+- Updated QuestionFormModal.module.scss: added optionsSection, optionsSectionHeader, optionsList, optionRow, optionInput styles
+- Updated obras/[workId]/page.tsx:
+  - Added `formInitialOptions` state (InlineOption[]) to track initial options when editing
+  - Made `handleEditQuestion` async: fetches options before opening modal
+  - Updated `handleSubmitQuestion` to accept `options` in payload; on create: POST question then POST each option sequentially; on edit: delete removed options first, then update existing, then create new (sequential to avoid unique constraint conflicts on `order` column)
+  - Passes `initialOptions` to QuestionFormModal; resets `formInitialOptions` on close
+- All 57 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `QuestionFormModal.tsx`, `QuestionFormModal.module.scss`, `obras/[workId]/page.tsx`
+- **Learnings for future iterations:**
+  - Backend Question/Option models, controllers, and tests were already complete from a prior implementation
+  - Sequential option operations (delete → update → create) avoid unique constraint violations on (question_id, order) during reordering
+  - To fetch options before opening edit modal: make the handler async, await the fetch, then open the modal with the fetched data as `initialOptions`
+  - Export InlineOption type from QuestionFormModal.tsx for re-use in page.tsx
 ---
 
 ## 2026-02-22 - US-001
