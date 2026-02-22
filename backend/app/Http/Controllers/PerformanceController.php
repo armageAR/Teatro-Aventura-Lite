@@ -467,6 +467,7 @@ class PerformanceController extends Controller
             'performance_id' => $performance->id,
             'status' => $performance->status,
             'play_title' => $performance->play?->title,
+            'updated_at' => $performance->updated_at?->toISOString(),
             'active_question' => $activeQuestion,
         ]);
     }

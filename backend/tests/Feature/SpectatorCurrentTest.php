@@ -172,4 +172,22 @@ class SpectatorCurrentTest extends TestCase
 
         $response->assertNotFound();
     }
+
+    public function test_current_response_includes_updated_at(): void
+    {
+        $play = Play::factory()->create();
+        $performance = Performance::factory()->for($play)->create(['status' => 'live']);
+
+        $response = $this->getJson('/api/performances/' . $performance->id . '/current');
+
+        $response->assertOk()
+            ->assertJsonStructure(['performance_id', 'status', 'play_title', 'updated_at', 'active_question']);
+
+        $this->assertNotNull($response->json('updated_at'));
+        // Should be a valid ISO 8601 datetime string
+        $this->assertMatchesRegularExpression(
+            '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/',
+            $response->json('updated_at')
+        );
+    }
 }

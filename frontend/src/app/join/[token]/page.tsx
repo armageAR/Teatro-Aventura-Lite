@@ -32,6 +32,7 @@ type CurrentStateApi = {
   performance_id: number;
   status: string;
   play_title: string | null;
+  updated_at: string;
   active_question: CurrentActiveQuestionApi | null;
 };
 
@@ -48,7 +49,28 @@ function statusLabel(status: string): string {
   }
 }
 
-const POLL_INTERVAL_MS = 3000;
+/** Polling interval (ms) when the browser tab is visible */
+const POLL_INTERVAL_ACTIVE_MS = 3000;
+/** Polling interval (ms) when the tab is in background or screen locked */
+const POLL_INTERVAL_BACKGROUND_MS = 12000;
+/** Maximum backoff cap (ms) */
+const POLL_BACKOFF_MAX_MS = 60000;
+
+/**
+ * Calculates next poll delay with exponential backoff and jitter.
+ * Base interval is 3s when visible, 12s when backgrounded.
+ * On consecutive errors the interval doubles up to POLL_BACKOFF_MAX_MS,
+ * then a ±25% jitter is applied to avoid thundering herd.
+ */
+function calcPollDelay(errorCount: number): number {
+  const isVisible =
+    typeof document === "undefined" || document.visibilityState !== "hidden";
+  const base = isVisible ? POLL_INTERVAL_ACTIVE_MS : POLL_INTERVAL_BACKGROUND_MS;
+  if (errorCount === 0) return base;
+  const exp = Math.min(base * Math.pow(2, errorCount), POLL_BACKOFF_MAX_MS);
+  const jitter = exp * 0.25 * (Math.random() * 2 - 1);
+  return Math.round(exp + jitter);
+}
 
 export default function JoinPage() {
   const { token } = useParams<{ token: string }>();
@@ -62,21 +84,59 @@ export default function JoinPage() {
   const [voteError, setVoteError] = useState<string | null>(null);
 
   const storageKey = `spectator_session_${token}`;
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Polling state held in refs to avoid stale closures in setTimeout callbacks
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollErrorCountRef = useRef(0);
+  const joinDataRef = useRef<JoinResponseApi | null>(null);
+  // Holds the latest scheduleNextPoll so the recursive timeout can call it
+  const scheduleRef = useRef<(() => void) | null>(null);
 
   const fetchCurrent = useCallback(
-    async (performanceId: number, sessionId: string) => {
+    async (performanceId: number, sessionId: string): Promise<boolean> => {
       try {
         const response = await api.get<CurrentStateApi>(
           `/api/performances/${performanceId}/current?spectator_session_id=${encodeURIComponent(sessionId)}`
         );
         setCurrentState(response.data);
+        return true;
       } catch {
-        // Silently ignore polling errors — the page stays with last known state
+        // Keep last known state; caller decides how to handle the error
+        return false;
       }
     },
     []
   );
+
+  /**
+   * Cancels any pending poll timer and schedules the next one.
+   * Uses calcPollDelay() so the interval adapts to visibility and error count.
+   */
+  const scheduleNextPoll = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    const data = joinDataRef.current;
+    if (!data) return;
+    const delay = calcPollDelay(pollErrorCountRef.current);
+    pollTimerRef.current = setTimeout(async () => {
+      const d = joinDataRef.current;
+      if (!d) return;
+      const success = await fetchCurrent(d.performance_id, d.spectator_session_id);
+      if (success) {
+        pollErrorCountRef.current = 0;
+      } else {
+        pollErrorCountRef.current = Math.min(pollErrorCountRef.current + 1, 10);
+      }
+      scheduleRef.current?.();
+    }, delay);
+  }, [fetchCurrent]);
+
+  // Keep scheduleRef pointing at the latest stable scheduleNextPoll
+  useEffect(() => {
+    scheduleRef.current = scheduleNextPoll;
+  }, [scheduleNextPoll]);
 
   const join = useCallback(async () => {
     setLoading(true);
@@ -112,7 +172,7 @@ export default function JoinPage() {
 
       setJoinData(session);
 
-      // Immediately fetch current state
+      // Always fetch full current state on page load
       await fetchCurrent(session.performance_id, session.spectator_session_id);
     } catch (err) {
       if (isAxiosError(err)) {
@@ -150,7 +210,7 @@ export default function JoinPage() {
           client_vote_id: clientVoteId,
         });
 
-        // Immediately refresh state to show confirmation
+        // Immediately refresh state to show vote confirmation
         await fetchCurrent(
           joinData.performance_id,
           joinData.spectator_session_id
@@ -177,25 +237,39 @@ export default function JoinPage() {
     }
   }, [token, join]);
 
-  // Start polling once we have session data
+  // Start adaptive polling once we have session data
   useEffect(() => {
     if (!joinData) return;
 
-    const { performance_id, spectator_session_id } = joinData;
+    joinDataRef.current = joinData;
+    pollErrorCountRef.current = 0;
+    scheduleRef.current?.();
 
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-    }
+    /**
+     * Page Visibility API: adapt the polling interval when the tab visibility changes.
+     * - Becoming visible: reset backoff, poll immediately, then resume 3s cadence.
+     * - Going to background: reschedule with the 12s background interval.
+     */
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        pollErrorCountRef.current = 0;
+        fetchCurrent(joinData.performance_id, joinData.spectator_session_id);
+        scheduleRef.current?.();
+      } else {
+        // Reschedule so calcPollDelay picks the background interval
+        scheduleRef.current?.();
+      }
+    };
 
-    pollTimerRef.current = setInterval(() => {
-      fetchCurrent(performance_id, spectator_session_id);
-    }, POLL_INTERVAL_MS);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
+        clearTimeout(pollTimerRef.current);
         pollTimerRef.current = null;
       }
+      joinDataRef.current = null;
     };
   }, [joinData, fetchCurrent]);
 
