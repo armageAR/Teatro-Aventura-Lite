@@ -46,8 +46,14 @@
   margin-bottom: 1.25rem;
 }
 
-.sessionInfo {
-  font-size: 0.875rem;
+.waitingText {
+  font-size: 0.9375rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.closedText {
+  font-size: 0.9375rem;
   color: #6b7280;
   margin: 0;
 }
@@ -70,4 +76,71 @@
   p {
     margin: 0;
   }
+}
+
+// Question display
+.questionBox {
+  margin-top: 0.5rem;
+  text-align: left;
+}
+
+.questionText {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.optionsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.optionItem {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  color: #374151;
+}
+
+// Voted confirmation
+.votedConfirmation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.votedIcon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.votedText {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #065f46;
+  margin: 0;
+}
+
+.votedSubText {
+  font-size: 0.9375rem;
+  color: #374151;
+  margin: 0;
 }

@@ -358,6 +358,58 @@ class PerformanceController extends Controller
         return response()->json($this->buildQuestionStatus($pq->fresh(), $question));
     }
 
+    public function current(Performance $performance, Request $request): JsonResponse
+    {
+        $performance->load('play');
+
+        $spectatorSessionId = $request->query('spectator_session_id');
+
+        // Find the currently active question (sent but not closed)
+        $activePq = $performance->performanceQuestions()
+            ->whereNotNull('sent_at')
+            ->whereNull('closed_at')
+            ->with('question.options')
+            ->first();
+
+        $activeQuestion = null;
+        if ($activePq) {
+            $question = $activePq->question;
+
+            $hasVoted = false;
+            $votedOptionId = null;
+
+            if ($spectatorSessionId) {
+                $vote = Vote::where('performance_question_id', $activePq->id)
+                    ->where('spectator_token', $spectatorSessionId)
+                    ->first();
+
+                if ($vote) {
+                    $hasVoted = true;
+                    $votedOptionId = $vote->question_option_id;
+                }
+            }
+
+            $activeQuestion = [
+                'id' => $question->id,
+                'question' => $question->question,
+                'options' => $question->options->map(fn($o) => [
+                    'id' => $o->id,
+                    'text' => $o->text,
+                    'order' => $o->order,
+                ])->values(),
+                'has_voted' => $hasVoted,
+                'voted_option_id' => $votedOptionId,
+            ];
+        }
+
+        return response()->json([
+            'performance_id' => $performance->id,
+            'status' => $performance->status,
+            'play_title' => $performance->play?->title,
+            'active_question' => $activeQuestion,
+        ]);
+    }
+
     private function buildQuestionStatus(PerformanceQuestion $pq, Question $question): array
     {
         $question->loadMissing('options');
