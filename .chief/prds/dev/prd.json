@@ -187,7 +187,8 @@
         "La restricción UNIQUE (performance_id, question_id, spectator_session_id) se aplica a nivel de base de datos"
       ],
       "priority": 13,
-      "passes": false
+      "passes": true,
+      "inProgress": true
     },
     {
       "id": "US-014",

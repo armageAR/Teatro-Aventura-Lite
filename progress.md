@@ -1,3 +1,22 @@
+## 2026-02-22 - US-013
+- Created migration `2026_02_22_800000_add_unique_spectator_per_question_to_votes_table.php`: added UNIQUE constraint on `(performance_question_id, spectator_token)` in `votes` table to enforce 1-vote-per-spectator-per-question at DB level
+- Added `vote()` method to `PerformanceController`: public endpoint; validates `spectator_session_id`, `question_option_id`, `client_vote_id`; checks `client_vote_id` idempotency first (returns existing if found); finds active `PerformanceQuestion` for the option's question in this performance; rejects if question not active or already closed; checks if spectator already voted on this question (returns existing); creates new Vote; returns `{ vote_id, question_option_id, message }` with 201 or 200
+- Added public route `POST /api/performances/{performance}/vote` in `api.php` (outside keycloak group)
+- Created `SpectatorVoteTest.php` with 9 tests: cast vote on active question, idempotent with same client_vote_id, cannot vote twice with different client_vote_id, cannot vote on closed question, cannot vote on pending question, option from different performance rejected, no auth required, validates required fields, multiple spectators can vote (114 total pass)
+- Updated `frontend/src/app/join/[token]/page.tsx`: added `voteLoading`/`voteError` states; added `handleVote` async callback that generates `crypto.randomUUID()` as `client_vote_id`, POSTs to `/api/performances/{id}/vote`, then calls `fetchCurrent` to refresh state; changed options from static `<li>` text to `<button className={styles.optionButton}>` with `disabled={voteLoading}`; added `voteError` display above options list
+- Updated `frontend/src/app/join/[token]/page.module.scss`: refactored `.optionItem` to remove padding (now just a container), added `.optionButton` with hover/disabled states, added `.voteError` error message style
+- Fixed frontend build: switched `layout.tsx` from `next/font/google` to `next/font/local` using Geist woff2 files copied from `node_modules/next/dist/esm/next-devtools/server/font/` to `public/fonts/` — necessary because the build environment has no internet access for Google Fonts
+- All 114 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `2026_02_22_800000_add_unique_spectator_per_question_to_votes_table.php`, `PerformanceController.php`, `api.php`, `SpectatorVoteTest.php`, `join/[token]/page.tsx`, `join/[token]/page.module.scss`, `layout.tsx`, `public/fonts/*.woff2`
+- **Learnings for future iterations:**
+  - Vote idempotency uses TWO layers: (1) `client_vote_id` unique check for network-retry idempotency, (2) `(performance_question_id, spectator_token)` unique check for duplicate-vote prevention
+  - Vote validation order: check `client_vote_id` first (idempotency), then validate option existence, then check question is active, then check spectator hasn't voted with a different client_vote_id
+  - Frontend vote: use `crypto.randomUUID()` (available in all modern browsers); falls back to `Math.random()` for SSR safety
+  - After a successful vote, call `fetchCurrent()` immediately to refresh `has_voted` state rather than optimistically updating — cleaner and more reliable
+  - `next/font/google` requires network access at build time — in offline environments, switch to `next/font/local` with woff2 files in `public/fonts/`; files already available at `node_modules/next/dist/esm/next-devtools/server/font/`
+
+---
+
 ## 2026-02-22 - US-012
 - Added `current()` method to `PerformanceController`: public endpoint (no keycloak); finds the active `PerformanceQuestion` (sent but not closed); checks if the given `spectator_session_id` has a `Vote` (`spectator_token` = sessionId) for the active question; returns `{ performance_id, status, play_title, active_question: { id, question, options[], has_voted, voted_option_id } | null }`
 - Added public route `GET /api/performances/{performance}/current` in `api.php` (outside keycloak group)
@@ -150,6 +169,8 @@
 - PostgreSQL UUID column: querying with non-UUID string throws `QueryException` — always try/catch when searching by UUID with user-supplied input
 - SpectatorSession: stored in `spectator_sessions` table with `performance_id` FK and `spectator_session_id` UUID (unique); frontend stores per-token in localStorage under key `spectator_session_{token}`
 - Spectator vote lookup: `Vote::where('performance_question_id', $pq->id)->where('spectator_token', $spectatorSessionId)` — `spectator_token` stores the `spectator_session_id` passed as query param to public endpoints
+- Vote deduplication: two-layer — `client_vote_id` (globally unique, for retry idempotency) + UNIQUE constraint on `(performance_question_id, spectator_token)` (for 1-vote-per-spectator-per-question)
+- `next/font/google` requires internet at build time — in offline CI, use `next/font/local` with woff2 files from `public/fonts/` (copy from `node_modules/next/dist/esm/next-devtools/server/font/`)
 
 ---
 
