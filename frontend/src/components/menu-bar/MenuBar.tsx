@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { ActionButton } from "@/components/ui/Button";
+import { UserMenu } from "@/components/user-menu/UserMenu";
 
 import styles from "./MenuBar.module.scss";
 
 export type MenuBarProps = {
-  user: { name: string } | null;
+  user: { name: string; role: string } | null;
+  onLogin: () => void;
   onLogout: () => void;
 };
 
-export function MenuBar({ user, onLogout }: MenuBarProps) {
+export function MenuBar({ user, onLogin, onLogout }: MenuBarProps) {
   return (
     <header className={styles.menuBar}>
       <div className={styles.left}>
@@ -30,14 +32,15 @@ export function MenuBar({ user, onLogout }: MenuBarProps) {
         )}
       </div>
 
-      {user && (
-        <div className={styles.actions}>
-          <span className={styles.greeting}>Hola, {user.name}</span>
-          <ActionButton variant="ghost" type="button" onClick={onLogout}>
-            Cerrar sesión
+      <div className={styles.actions}>
+        {user ? (
+          <UserMenu name={user.name} role={user.role} onLogout={onLogout} />
+        ) : (
+          <ActionButton variant="solid" type="button" onClick={onLogin}>
+            Ingresar
           </ActionButton>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }
