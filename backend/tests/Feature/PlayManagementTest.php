@@ -80,7 +80,41 @@ class PlayManagementTest extends TestCase
 
         $response
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['title', 'description']);
+            ->assertJsonValidationErrors(['title'])
+            ->assertJsonMissingValidationErrors(['description']);
+    }
+
+    public function test_store_accepts_optional_description_and_cover_image_url(): void
+    {
+        $this->withKeycloakToken();
+
+        $payload = [
+            'title' => 'Obra sin descripción',
+        ];
+
+        $response = $this->postJson('/api/plays', $payload);
+
+        $response
+            ->assertCreated()
+            ->assertJsonFragment(['title' => 'Obra sin descripción']);
+    }
+
+    public function test_store_accepts_cover_image_url(): void
+    {
+        $this->withKeycloakToken();
+
+        $payload = [
+            'title' => 'Obra con portada',
+            'cover_image_url' => 'https://example.com/cover.jpg',
+        ];
+
+        $response = $this->postJson('/api/plays', $payload);
+
+        $response
+            ->assertCreated()
+            ->assertJsonFragment(['cover_image_url' => 'https://example.com/cover.jpg']);
+
+        $this->assertDatabaseHas('plays', $payload);
     }
 
     public function test_authenticated_users_can_view_a_play(): void

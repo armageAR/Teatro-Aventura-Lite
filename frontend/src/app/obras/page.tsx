@@ -17,6 +17,7 @@ type WorkApi = {
   id: number;
   title: string;
   description?: string | null;
+  cover_image_url?: string | null;
   updated_at?: string | null;
   updatedAt?: string | null;
   deleted_at?: string | null;
@@ -28,6 +29,7 @@ function normalizeWork(work: WorkApi): Work {
     id: work.id,
     title: work.title,
     description: work.description ?? "",
+    coverImageUrl: work.cover_image_url ?? null,
     updatedAt: work.updated_at ?? work.updatedAt ?? null,
     deletedAt: work.deleted_at ?? work.deletedAt ?? null,
   };
@@ -210,15 +212,21 @@ export default function ObrasPage() {
     }
   };
 
-  const handleSubmitWork = async (payload: { title: string; description: string }) => {
+  const handleSubmitWork = async (payload: { title: string; description: string; coverImageUrl: string }) => {
     setFormSubmitting(true);
     setFormError(null);
 
+    const apiPayload = {
+      title: payload.title,
+      description: payload.description || null,
+      cover_image_url: payload.coverImageUrl || null,
+    };
+
     try {
       if (formMode === "create") {
-        await api.post(WORKS_ENDPOINT, payload);
+        await api.post(WORKS_ENDPOINT, apiPayload);
       } else if (selectedWork) {
-        await api.put(`${WORKS_ENDPOINT}/${selectedWork.id}`, payload);
+        await api.put(`${WORKS_ENDPOINT}/${selectedWork.id}`, apiPayload);
       }
 
       setFormOpen(false);

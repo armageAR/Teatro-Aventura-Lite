@@ -23,6 +23,7 @@ class Play extends Model
     protected $fillable = [
         'title',
         'description',
+        'cover_image_url',
     ];
 
     /**

@@ -10,6 +10,7 @@ import type { Work } from "./WorksTable";
 type WorkPayload = {
   title: string;
   description: string;
+  coverImageUrl: string;
 };
 
 type WorkFormModalProps = {
@@ -33,20 +34,24 @@ export function WorkFormModal({
 }: WorkFormModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState("");
 
   useEffect(() => {
     if (!open) {
       setTitle("");
       setDescription("");
+      setCoverImageUrl("");
       return;
     }
 
     if (initialWork) {
       setTitle(initialWork.title ?? "");
       setDescription(initialWork.description ?? "");
+      setCoverImageUrl(initialWork.coverImageUrl ?? "");
     } else {
       setTitle("");
       setDescription("");
+      setCoverImageUrl("");
     }
   }, [open, initialWork]);
 
@@ -56,7 +61,7 @@ export function WorkFormModal({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit({ title, description });
+    onSubmit({ title, description, coverImageUrl });
   };
 
   return (
@@ -101,6 +106,20 @@ export function WorkFormModal({
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="¿Cómo empieza la aventura?"
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="work-cover-image-url">
+              URL de imagen de portada
+            </label>
+            <input
+              id="work-cover-image-url"
+              className={styles.input}
+              type="url"
+              value={coverImageUrl}
+              onChange={(event) => setCoverImageUrl(event.target.value)}
+              placeholder="https://ejemplo.com/portada.jpg"
             />
           </div>
 

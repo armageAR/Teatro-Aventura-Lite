@@ -32,7 +32,8 @@ class PlayController extends Controller
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:500'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'cover_image_url' => ['nullable', 'string', 'url', 'max:2048'],
         ]);
 
         $play = Play::create($data)->loadCount(['questions', 'performances']);
@@ -55,7 +56,8 @@ class PlayController extends Controller
     {
         $data = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'description' => ['sometimes', 'required', 'string', 'max:500'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'cover_image_url' => ['sometimes', 'nullable', 'string', 'url', 'max:2048'],
         ]);
 
         $play->update($data);

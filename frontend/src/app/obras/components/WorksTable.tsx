@@ -8,6 +8,7 @@ export type Work = {
   id: number;
   title: string;
   description?: string;
+  coverImageUrl?: string | null;
   updatedAt: string | null;
   deletedAt: string | null;
 };
