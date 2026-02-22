@@ -1,3 +1,19 @@
+## 2026-02-22 - US-006
+- Added `qr()` method to `PerformanceController`: returns `{ join_url, join_token }` using `FRONTEND_URL` env var
+- Added route `GET /api/performances/{performance}/qr` inside keycloak middleware group in `api.php`
+- Added 2 new tests in `PerformanceManagementTest`: authenticated users can get QR data, guests cannot access QR endpoint
+- Installed `qrcode.react` v4.2.0 in frontend (exports `QRCodeSVG` and `QRCodeCanvas`)
+- Updated `/funciones/[performanceId]/page.tsx`: imports `QRCodeSVG`, computes `joinUrl` client-side using `window.location.origin`, added QR section below detail list
+- Updated `page.module.scss`: added `.qrSection`, `.qrHeading`, `.qrContainer`, `.qrLabel`, `.qrUrl` styles
+- All 60 backend tests pass; frontend typecheck + ESLint + build all clean
+- Files changed: `PerformanceController.php`, `api.php`, `PerformanceManagementTest.php`, `funciones/[performanceId]/page.tsx`, `funciones/[performanceId]/page.module.scss`, `package.json`, `package-lock.json`
+- **Learnings for future iterations:**
+  - `FRONTEND_URL` env var exists in backend `.env.example` — use `env('FRONTEND_URL', config('app.url'))` to build frontend-facing URLs
+  - `qrcode.react` v4.x exports `QRCodeSVG` and `QRCodeCanvas` (no default export)
+  - For join URLs in `"use client"` components, use `typeof window !== 'undefined' ? window.location.origin : ''` guard for SSR safety
+  - The `/qr` route must be added explicitly (not covered by `apiResource`) — add it separately in the keycloak group
+---
+
 ## Codebase Patterns
 - Performance model: has `status` (default 'draft') and `join_token` (UUID, unique) columns auto-set in `booted()` hook
 - Performance detail: GET /api/performances/:id now loads the `play` relationship (show() uses `$performance->load('play')`)

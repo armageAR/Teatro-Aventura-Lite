@@ -86,7 +86,7 @@
         "Existe un endpoint GET /api/performances/:id/qr que devuelve la URL o token"
       ],
       "priority": 6,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-007",
