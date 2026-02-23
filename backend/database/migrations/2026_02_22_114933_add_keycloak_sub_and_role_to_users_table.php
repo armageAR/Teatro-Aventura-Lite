@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->string('keycloak_sub')->nullable()->unique()->after('email');
-            $table->string('role')->default('producer')->after('keycloak_sub');
+           // $table->string('role')->default('producer')->after('keycloak_sub');
             $table->string('password')->nullable()->change();
         });
     }
@@ -18,7 +18,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['keycloak_sub', 'role']);
+            $table->dropColumn(['keycloak_sub']); //, 'role'
             $table->string('password')->nullable(false)->change();
         });
     }
